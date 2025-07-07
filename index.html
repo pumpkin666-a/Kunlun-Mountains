@@ -4190,6 +4190,17 @@ getComplexRelation(monthElement, dayElement, timeElement, monthGZ, dayGZ, timeGa
 { name: "正官身弱用殺格", chance: 16, condition: c => c.hasZhengGuan && c.isBodyWeak && c.hasQiSha },
 // 【出處】《三命通會》身弱見殺為用，性格剛毅果斷
 
+// ==== 十神格局（經典） ====
+{ name: "正印得祿格", chance: 30, condition: c => c.hasZhengYin && !c.hasQiSha && c.relations.includes("生我") && !c.hasShangGuan }, // 出處：《滴天髓》
+{ name: "食神生財格", chance: 33, condition: c => c.hasShiShen && c.hasZhengCai && c.relations.includes("我生") && !c.hasQiSha }, // 出處：《三命通會》
+{ name: "七殺制印格", chance: 32, condition: c => c.hasQiSha && c.hasZhengYin && !c.hasZhengGuan }, // 出處：《子平真詮》
+{ name: "偏財得祿格", chance: 30, condition: c => c.hasPianCai && c.relations.includes("我剋") && !c.hasJieCai }, // 出處：《三命會海》
+{ name: "傷官配印格", chance: 31, condition: c => c.hasShangGuan && c.hasZhengYin && !c.hasZhengCai && !c.hasZhengGuan }, // 出處：《命理約言》
+{ name: "官印雙清格", chance: 34, condition: c => c.hasZhengGuan && c.hasZhengYin && !c.hasShangGuan && !c.hasQiSha }, // 出處：《子平真詮》
+{ name: "財官雙美格", chance: 32, condition: c => c.hasZhengCai && c.hasZhengGuan && !c.hasJieCai && !c.hasBiJian }, // 出處：《命理約言》
+{ name: "殺印相生格", chance: 33, condition: c => c.hasQiSha && c.hasZhengYin && c.relations.includes("我生") }, // 出處：《滴天髓闡微》
+{ name: "比肩成格", chance: 28, condition: c => c.hasBiJian && !c.hasZhengCai && c.relations.includes("我生") }, // 出處：《窮通寶鑑》
+{ name: "劫財成勢格", chance: 29, condition: c => c.hasJieCai && !c.hasZhengYin && !c.hasZhengGuan }, // 出處：《三命通會》
 
 // ==== 補充特殊十神格局（含優化調整） ====
 
@@ -4294,6 +4305,16 @@ getComplexRelation(monthElement, dayElement, timeElement, monthGZ, dayGZ, timeGa
 { name: "正印旺身", chance: 28, condition: c => c.hasZhengYin && c.relations.includes("我生") }, 
 // 「財星助身」 - 財星生助日主
 { name: "財星助身", chance: 27, condition: c => c.hasZhengCai && c.relations.includes("我生") }, 
+{ name: "傷官太過命", chance: 28, condition: c => c.hasShangGuan && !c.hasZhengYin && !c.hasZhengGuan }, // 出處：《滴天髓》
+{ name: "七殺奪官命", chance: 27, condition: c => c.hasQiSha && c.hasZhengGuan }, // 出處：《三命通會》
+{ name: "財多壓身命", chance: 25, condition: c => c.hasZhengCai && c.relations.includes("剋我") && !c.hasBiJian }, // 出處：《子平真詮》
+{ name: "比肩爭財命", chance: 26, condition: c => c.hasBiJian && c.hasZhengCai }, // 出處：《窮通寶鑑》
+{ name: "重印壓身命", chance: 25, condition: c => c.hasZhengYin && !c.hasZhengCai && !c.hasZhengGuan }, // 出處：《滴天髓》
+{ name: "七殺無制命", chance: 29, condition: c => c.hasQiSha && !c.hasShangGuan && !c.hasZhengYin }, // 出處：《神峰通考》
+{ name: "身弱見財命", chance: 24, condition: c => c.hasZhengCai && !c.relations.includes("我生") && !c.hasBiJian }, // 出處：《命理正宗》
+{ name: "印綬奪食命", chance: 26, condition: c => c.hasZhengYin && c.hasShiShen && !c.hasZhengCai }, // 出處：《三命通會》
+{ name: "殺印交戰命", chance: 27, condition: c => c.hasQiSha && c.hasZhengYin && !c.hasShiShen }, // 出處：《滴天髓闡微》
+{ name: "傷官敗印命", chance: 28, condition: c => c.hasShangGuan && c.hasZhengYin && c.relations.includes("我剋") }, // 出處：《命理精微》
 
 
 // ==== 常見命格（偏兇版）====
@@ -4310,6 +4331,16 @@ getComplexRelation(monthElement, dayElement, timeElement, monthGZ, dayGZ, timeGa
 { name: "祿馬失途命", chance: 28, condition: c => ["午", "亥"].includes(c.monthGZ.zhi) && !c.relations.includes("我生") }, // 出處：《三命通會》
 { name: "印重官輕命", chance: 27, condition: c => c.hasZhengYin && !c.hasZhengGuan }, // 出處：《滴天髓》
 { name: "小人暗行命", chance: 26, condition: c => c.hasJieCai && c.relations.includes("剋我") && !c.relations.includes("我生") }, // 出處：《子平粹言》
+{ name: "財重壓身命", chance: 24, condition: c => c.hasZhengCai && !c.hasBiJian && !c.hasZhengYin }, // 出處：《子平真詮》
+{ name: "印多身弱命", chance: 25, condition: c => c.hasZhengYin && c.relations.includes("剋我") }, // 出處：《滴天髓》
+{ name: "食神無氣命", chance: 23, condition: c => c.hasShiShen && !c.relations.includes("我生") }, // 出處：《三命通會》
+{ name: "官殺亂命", chance: 26, condition: c => c.hasZhengGuan && c.hasQiSha && !c.hasZhengYin }, // 出處：《神峰通考》
+{ name: "桃花重重命", chance: 27, condition: c => ["子", "午", "卯", "酉"].includes(c.dayGZ.zhi) && ["子", "午", "卯", "酉"].includes(c.timeZhi) }, // 出處：《三命通會》
+{ name: "水多木漂命", chance: 25, condition: c => c.dayElement === "木" && c.monthElement === "水" && c.timeElement === "水" }, // 出處：《滴天髓》
+{ name: "木火燥命", chance: 26, condition: c => c.dayElement === "木" && c.monthElement === "火" && c.timeElement === "火" }, // 出處：《三命通會》
+{ name: "官輕印重命", chance: 25, condition: c => c.hasZhengYin && !c.hasZhengGuan && c.relations.includes("生我") }, // 出處：《子平粹言》
+{ name: "七殺奪權命", chance: 26, condition: c => c.hasQiSha && c.relations.includes("我剋") && !c.hasZhengGuan }, // 出處：《三命指迷》
+{ name: "殺重無制命", chance: 28, condition: c => c.hasQiSha && !c.hasZhengYin && !c.hasShangGuan }, // 出處：《滴天髓》
    
    
 
