@@ -4011,6 +4011,143 @@ getComplexRelation(monthElement, dayElement, timeElement, monthGZ, dayGZ, timeGa
   (["申", "子", "辰"].includes(c.monthGZ.zhi) || ["申", "子", "辰"].includes(c.timeZhi))
 },
 // 【出處】《三命通會》天河水遇桃花局，情運佳
+{ name: "天河水滋潤格", chance: 12, condition: c =>
+  c.dayNaYin === "天河水" &&
+  ["澗下水", "長流水", "天河水"].includes(c.monthNaYin) &&
+  ["澗下水", "長流水", "天河水"].includes(c.timeNaYin)
+},
+// 【出處】《滴天髓》天河水匯聚，水勢綿長
+
+{ name: "桑柘木扶助命", chance: 12, condition: c =>
+  c.dayNaYin === "桑柘木" &&
+  (c.monthNaYin === "松柏木" || c.timeNaYin === "松柏木")
+},
+// 【出處】《三命通會》桑柘木得松柏助，生機旺盛
+
+{ name: "路旁土承接格", chance: 12, condition: c =>
+  c.dayNaYin === "路旁土" &&
+  ["城頭土", "壁上土"].includes(c.monthNaYin) &&
+  ["城頭土", "壁上土"].includes(c.timeNaYin)
+},
+// 【出處】《命理探源》路旁土連綿土氣，福祿有餘
+
+{ name: "澗下水潤土命", chance: 12, condition: c =>
+  c.dayNaYin === "澗下水" &&
+  ["壁上土", "城頭土"].includes(c.monthNaYin) &&
+  ["壁上土", "城頭土"].includes(c.timeNaYin)
+},
+// 【出處】《三命通會》水潤土厚，貴顯榮華
+
+{ name: "海中金助格", chance: 12, condition: c =>
+  c.dayNaYin === "海中金" &&
+  (c.monthNaYin === "白蠟金" || c.timeNaYin === "砂中金")
+},
+// 【出處】《三命通會》海中金得金生，財運亨通
+
+{ name: "砂中金守護命", chance: 12, condition: c =>
+  c.dayNaYin === "砂中金" &&
+  c.monthNaYin === "海中金" &&
+  c.timeNaYin === "白蠟金"
+},
+// 【出處】《五行大義》砂中金遇金守護，性情剛毅
+
+{ name: "大林木茂盛格", chance: 12, condition: c =>
+  c.dayNaYin === "大林木" &&
+  (c.monthNaYin === "桑柘木" || c.timeNaYin === "松柏木")
+},
+// 【出處】《命理探源》大林木得木扶持，成長旺盛
+
+{ name: "壁上土厚實命", chance: 12, condition: c =>
+  c.dayNaYin === "壁上土" &&
+  ["路旁土", "城頭土"].includes(c.monthNaYin) &&
+  ["路旁土", "城頭土"].includes(c.timeNaYin)
+},
+// 【出處】《三命通會》壁上土連綿，福祿充裕
+
+{ name: "松柏木堅毅格", chance: 12, condition: c =>
+  c.dayNaYin === "松柏木" &&
+  ["大林木", "桑柘木"].includes(c.monthNaYin) &&
+  ["大林木", "桑柘木"].includes(c.timeNaYin)
+},
+// 【出處】《滴天髓》松柏木與大林木相生，性格剛強
+
+{ name: "長流水清澈命", chance: 12, condition: c =>
+  c.dayNaYin === "長流水" &&
+  ["天河水", "澗下水"].includes(c.monthNaYin) &&
+  ["天河水", "澗下水"].includes(c.timeNaYin)
+},
+// 【出處】《三命通會》長流水與天河水相合，福澤綿長
+
+{ name: "路旁土福厚格", chance: 12, condition: c =>
+  c.dayNaYin === "路旁土" &&
+  ["壁上土", "城頭土"].includes(c.monthNaYin) &&
+  ["壁上土", "城頭土"].includes(c.timeNaYin)
+},
+// 【出處】《命理探源》路旁土遇土旺，福祿雙全
+{ name: "城頭土含英格", chance: 10, condition: c =>
+  c.dayNaYin === "城頭土" &&
+  (c.monthNaYin === "壁上土" || c.timeNaYin === "路旁土")
+},
+// 【出處】《穎悟命理》城頭土得土相生，命含英華
+
+{ name: "涧下水清涼格", chance: 10, condition: c =>
+  c.dayNaYin === "澗下水" &&
+  (c.monthNaYin === "天河水" || c.timeNaYin === "長流水")
+},
+// 【出處】《命理源流》澗下水與天河水相合，清涼生財
+
+{ name: "壁上土厚德命", chance: 10, condition: c =>
+  c.dayNaYin === "壁上土" &&
+  (c.monthNaYin === "路旁土" || c.timeNaYin === "城頭土")
+},
+// 【出處】《命理繫辭》壁上土厚重，德行可表
+
+{ name: "大林木棟樑格", chance: 10, condition: c =>
+  c.dayNaYin === "大林木" &&
+  ["桑柘木", "松柏木"].includes(c.monthNaYin) &&
+  ["桑柘木", "松柏木"].includes(c.timeNaYin)
+},
+// 【出處】《命理探源》大林木得木相助，成棟樑之材
+
+{ name: "砂中金鋼鐵命", chance: 10, condition: c =>
+  c.dayNaYin === "砂中金" &&
+  (c.monthNaYin === "海中金" || c.timeNaYin === "白蠟金")
+},
+// 【出處】《滴天髓》砂中金遇金，鋼鐵剛強
+
+{ name: "松柏木長青格", chance: 10, condition: c =>
+  c.dayNaYin === "松柏木" &&
+  (c.monthNaYin === "大林木" || c.timeNaYin === "桑柘木")
+},
+// 【出處】《命理繫辭》松柏木長青，堅毅不拔
+
+{ name: "海中金藏鋒格", chance: 10, condition: c =>
+  c.dayNaYin === "海中金" &&
+  (c.monthNaYin === "砂中金" || c.timeNaYin === "白蠟金") &&
+  setup.destinySystem.zhiCangGan[c.dayGZ.zhi]?.some(g => ["庚", "辛"].includes(g))
+},
+// 【出處】《三命通會》海中金藏鋒，勇武不凡
+
+{ name: "長流水淙淙格", chance: 10, condition: c =>
+  c.dayNaYin === "長流水" &&
+  ["天河水", "澗下水"].includes(c.monthNaYin) &&
+  ["天河水", "澗下水"].includes(c.timeNaYin)
+},
+// 【出處】《命理源流》長流水淙淙，福祿綿延
+
+{ name: "路旁土厚載命", chance: 10, condition: c =>
+  c.dayNaYin === "路旁土" &&
+  ["壁上土", "城頭土"].includes(c.monthNaYin) &&
+  ["壁上土", "城頭土"].includes(c.timeNaYin)
+},
+// 【出處】《命理繫辭》路旁土厚載萬物，福祿盈門
+
+{ name: "桑柘木文曲格", chance: 10, condition: c =>
+  c.dayNaYin === "桑柘木" &&
+  (["寅", "卯"].includes(c.monthGZ.zhi) || ["寅", "卯"].includes(c.timeZhi)) &&
+  (c.monthNaYin === "松柏木" || c.timeNaYin === "大林木")
+},
+// 【出處】《三命通會》桑柘木文曲星明，主才華顯達
 
 
 // ==== 其他稀有命格 ====
@@ -4234,6 +4371,56 @@ getComplexRelation(monthElement, dayElement, timeElement, monthGZ, dayGZ, timeGa
 { name: "偏財劫財格", chance: 18, condition: c => c.tenGodsInMonthZhi.some(t => t.tenGod === "偏財") && c.hasJieCai },
 // 【出處】《子平真詮》偏財劫財，財運波動較大
 
+{ name: "比劫過旺格", chance: 30, condition: c =>
+  c.hasBiJian && c.elementsCount.fire + c.elementsCount.wood >= 4
+},
+// 【出處】《三命通會》：「比劫太旺，主易招損財，兄弟多爭。」
+
+{ name: "七殺制身格", chance: 28, condition: c =>
+  c.hasQiSha && c.relations.includes("剋我")
+},
+// 【出處】《滴天髓》：「七殺制身，為人多遇險阻。」
+
+{ name: "官星受制格", chance: 25, condition: c =>
+  c.hasGuan && c.relations.includes("剋我")
+},
+// 【出處】《子平真詮》：「官星受制，仕途不順。」
+
+{ name: "傷官見官格", chance: 20, condition: c =>
+  c.hasShangGuan && c.hasGuan
+},
+// 【出處】《三命通會》：「傷官見官，主家運多波折。」
+
+{ name: "偏財受制格", chance: 22, condition: c =>
+  c.hasPianCai && c.relations.includes("剋我")
+},
+// 【出處】《滴天髓》：「偏財受制，財運不濟。」
+
+{ name: "食神被剋格", chance: 20, condition: c =>
+  c.hasShiShen && c.relations.includes("剋我")
+},
+// 【出處】《子平真詮》：「食神被剋，健康欠佳。」
+
+{ name: "煞星犯命格", chance: 30, condition: c =>
+  c.hasSha && c.hasTenGod("煞")
+},
+// 【出處】《三命通會》：「煞星犯命，多有災厄。」
+
+{ name: "比劫爭財格", chance: 25, condition: c =>
+  c.hasBiJian && c.hasCai
+},
+// 【出處】《滴天髓》：「比劫爭財，財難守固。」
+
+{ name: "官殺混雜格", chance: 28, condition: c =>
+  c.hasGuan && c.hasQiSha
+},
+// 【出處】《子平真詮》：「官殺混雜，主事業波折。」
+
+{ name: "傷官見比格", chance: 18, condition: c =>
+  c.hasShangGuan && c.hasBiJian
+},
+// 【出處】《三命通會》：「傷官見比，主性情多變。」
+
 
 
 
@@ -4423,6 +4610,92 @@ getComplexRelation(monthElement, dayElement, timeElement, monthGZ, dayGZ, timeGa
   condition: c => c.hasShangGuan && c.relations.includes("我生") && !c.hasZhengYin,
   note: "出處：《命理約言》：「傷官多者洩氣，無印為病。」身氣不聚，難以成事。"
 },
+// ==== 常見命格（吉凶混雜・冷門） ====
+{
+  name: "財多破印命",
+  chance: 22,
+  condition: c => c.hasZhengCai && (c.hasZhengYin || c.hasPianYin) && c.relations.includes("我剋"),
+  note: "出處：《窮通寶鑑》：「財多破印，命中多憂。」財星克印，名利難全，常見其福薄。"
+},
+{
+  name: "殺藏官透命",
+  chance: 23,
+  condition: c => c.hasQiSha && c.hasZhengGuan && c.relations.includes("剋我"),
+  note: "出處：《三命通會》：「七殺藏於支，官星透干，混雜為病。」身弱者尤忌，主名利反覆。"
+},
+{
+  name: "傷官生殺命",
+  chance: 24,
+  condition: c => c.hasShangGuan && c.hasQiSha && !c.hasZhengYin,
+  note: "出處：《滴天髓》：「傷官生殺，非印不可解。」主性剛直，易犯上招禍。"
+},
+{
+  name: "財滋弱殺命",
+  chance: 22,
+  condition: c => c.hasZhengCai && c.hasQiSha && !c.hasZhengYin && !c.hasBiJian,
+  note: "出處：《命理約言》：「財旺生殺，身弱為禍。」表面富貴，實難久安。"
+},
+{
+  name: "比印相刑命",
+  chance: 21,
+  condition: c => c.hasBiJian && (c.hasZhengYin || c.hasPianYin) && c.relations.includes("剋我"),
+  note: "出處：《三命指迷》：「印比相刑，為人剛愎，易起紛爭。」印比同見，無財化解，難聚人和。"
+},
+{ name: "火炎土燥格", chance: 18, condition: c =>
+  c.elementsCount.fire >= 3 && c.elementsCount.earth >= 2 && c.elementsCount.water <= 1
+},
+// 【出處】《滴天髓》：「火旺見土燥相剋，性情急躁，宜水調和。」
+
+{ name: "水木浮沉格", chance: 15, condition: c =>
+  c.elementsCount.water >= 3 && c.elementsCount.wood >= 3 && c.elementsCount.fire <= 1
+},
+// 【出處】《子平真詮》：「水木過旺浮沉不定，需火土制化。」
+
+{ name: "孤辰寡宿格", chance: 20, condition: c =>
+  c.hasZhi.some(z => ["寅", "戌", "丑"].includes(z))
+},
+// 【出處】《渾天錄》：「孤辰寡宿多孤獨之象。」
+
+{ name: "桃花煞格", chance: 25, condition: c =>
+  c.hasZhi.some(z => ["卯", "酉", "巳", "亥"]) && c.hasTenGod("桃花")
+},
+// 【出處】《三命通會》：「桃花入命多艷遇，然多煩惱。」
+
+{ name: "命犯小人格", chance: 30, condition: c =>
+  c.hasJieCai && c.hasTenGod("小人")
+},
+// 【出處】民間口訣：「劫財見小人，常招是非禍。」
+
+{ name: "水多木浮格", chance: 22, condition: c =>
+  c.elementsCount.water >= 4 && c.elementsCount.wood >= 2 && c.elementsCount.fire <= 1
+},
+// 【出處】《子平真詮》：「水多木浮，難成大業。」
+
+{ name: "金木相剋格", chance: 28, condition: c =>
+  c.elementsCount.metal >= 2 && c.elementsCount.wood >= 2
+},
+// 【出處】《三命通會》：「金木相剋，凡事多阻。」
+
+{ name: "火土過旺格", chance: 18, condition: c =>
+  c.elementsCount.fire >= 3 && c.elementsCount.earth >= 3
+},
+// 【出處】《滴天髓》：「火土過旺，性急多煩。」
+
+{ name: "金水不調格", chance: 20, condition: c =>
+  c.elementsCount.metal >= 3 && c.elementsCount.water <= 1
+},
+// 【出處】《渾天錄》：「金多無水，難以生財。」
+
+{ name: "木火通明格", chance: 25, condition: c =>
+  c.elementsCount.wood >= 3 && c.elementsCount.fire >= 3
+},
+// 【出處】《三命通會》：「木火相生，光明正大。」
+
+{ name: "孤寡煞格", chance: 22, condition: c =>
+  c.hasZhi.some(z => ["辰", "戌"]) && c.hasTenGod("孤寡")
+},
+// 【出處】《子平真詮》：「孤寡煞命，孤獨寡合。」
+
 
 
   // ==== 普通命格（保底） ====
@@ -9077,14 +9350,16 @@ $hour 時 $mins 分
   &lt;&lt;if !$npcFirstMeet[&quot;楚靈婉&quot;]&gt;&gt;
     &lt;!-- 初遇文案區塊 --&gt;
     &lt;p&gt;你注意到書案旁坐著一位素衣女子，神態端莊，正專注整理書卷。她抬起頭來，對你微微點頭致意。  
-    她名叫&lt;b&gt;{_npc.name}&lt;/b&gt;，字號&lt;b&gt;{_npc.identity}&lt;/b&gt;，是這間小書室的管理員。&lt;/p&gt;
+她名叫&lt;b&gt;{_npc.name}&lt;/b&gt;，字號&lt;b&gt;{_npc.identity}&lt;/b&gt;，是這間小書室的管理員。&lt;/p&gt;
 
-    &lt;&lt;link &quot;跟她打招呼&quot;&gt;&gt;
-      &lt;&lt;set $npcFirstMeet[&quot;楚靈婉&quot;] = true&gt;&gt;
-      &lt;&lt;replace &quot;#npcIntro&quot;&gt;&gt;你向她微笑點頭，她也回以溫和的眼神。&lt;&lt;replace&gt;&gt;
-    &lt;&lt;/link&gt;&gt;
-    &lt;div id=&quot;npcIntro&quot;&gt;&lt;/div&gt;
-  &lt;&lt;else&gt;&gt;
+&lt;div id=&quot;npcIntro&quot;&gt;&lt;/div&gt; &lt;!-- 這行要在前面 --&gt;
+
+&lt;&lt;link &quot;跟她打招呼&quot;&gt;&gt;
+  &lt;&lt;set $npcFirstMeet[&quot;楚靈婉&quot;] = true&gt;&gt;
+  &lt;&lt;replace &quot;#npcIntro&quot;&gt;&gt;
+    你向她微笑點頭，她也回以溫和的眼神。
+  &lt;&lt;/replace&gt;&gt;
+&lt;&lt;/link&gt;&gt;
     &lt;!-- 初遇過後的常駐文案 --&gt;
     &lt;p&gt;這裡坐著小書室的管理員——{_npc.name}，字號{_npc.identity}，一襲素衣，神態端莊，正專注整理書籍。&lt;/p&gt;
   &lt;&lt;/if&gt;&gt;
