@@ -3440,6 +3440,90 @@ const _getBoneWeight = function(monthStr, dayNum, birthTime, yearGanZhi) {
     qian
   };
 };
+// ==== setup.destinySystem 核心模組 ==== 
+// 載入：五行關係、支藏干、十神計算、暗合三合、刑沖六合等
+setup.destinySystem = {
+  // 天干對應五行
+  tianGanToFiveElement: {
+    甲: "木", 乙: "木", 丙: "火", 丁: "火", 戊: "土",
+    己: "土", 庚: "金", 辛: "金", 壬: "水", 癸: "水"
+  },
+
+  // 地支對應五行（支主氣）
+  zhiToElement: {
+    子: "水", 丑: "土", 寅: "木", 卯: "木", 辰: "土",
+    巳: "火", 午: "火", 未: "土", 申: "金", 酉: "金", 戌: "土", 亥: "水"
+  },
+ 
+  // 天干陰陽屬性
+  ganYinYang: {
+    甲: "陽", 乙: "陰", 丙: "陽", 丁: "陰", 戊: "陽",
+    己: "陰", 庚: "陽", 辛: "陰", 壬: "陽", 癸: "陰"
+  },
+
+  // 支藏干（簡化）
+  zhiCangGan: {
+    子: ["癸"], 丑: ["己", "癸", "辛"], 寅: ["甲", "丙", "戊"], 卯: ["乙"],
+    辰: ["戊", "乙", "癸"], 巳: ["丙", "庚", "戊"], 午: ["丁", "己"], 未: ["己", "丁", "乙"],
+    申: ["庚", "壬", "戊"], 酉: ["辛"], 戌: ["戊", "辛", "丁"], 亥: ["壬", "甲"]
+  },
+
+  // 五行生剋關係（回傳：我生、生我、我剋、剋我、同氣）
+  getRelation: function(from, to) {
+    const relationMap = {
+      木: { 生: "火", 剋: "土" },
+      火: { 生: "土", 剋: "金" },
+      土: { 生: "金", 剋: "水" },
+      金: { 生: "水", 剋: "木" },
+      水: { 生: "木", 剋: "火" }
+    };
+    if (from === to) return "同氣";
+    if (relationMap[from].生 === to) return "我生";
+    if (relationMap[to].生 === from) return "生我";
+    if (relationMap[from].剋 === to) return "我剋";
+    if (relationMap[to].剋 === from) return "剋我";
+    return "無關";
+  },
+
+  // 判斷天干十神（例如：甲 -> 乙 = 比肩）
+  getTenGod: function(selfGan, targetGan) {
+    const selfEle = this.tianGanToFiveElement[selfGan];
+    const targetEle = this.tianGanToFiveElement[targetGan];
+    const rel = this.getRelation(selfEle, targetEle);
+    const isSameYinYang = this.ganYinYang[selfGan] === this.ganYinYang[targetGan];
+    switch (rel) {
+      case "同氣": return isSameYinYang ? "比肩" : "劫財";
+      case "我生": return isSameYinYang ? "食神" : "傷官";
+      case "生我": return isSameYinYang ? "正印" : "偏印";
+      case "我剋": return isSameYinYang ? "正財" : "偏財";
+      case "剋我": return isSameYinYang ? "正官" : "七殺";
+    }
+    return "無十神";
+  },
+
+  // 三合局（申子辰水、寅午戌火、亥卯未木、巳酉丑金）
+  zhiSanHeGroups: [
+    ["申", "子", "辰"], ["寅", "午", "戌"],
+    ["亥", "卯", "未"], ["巳", "酉", "丑"]
+  ],
+
+  // 六合（子丑、寅亥、卯戌、辰酉、巳申、午未）
+  zhiHePairs: [
+    ["子", "丑"], ["寅", "亥"], ["卯", "戌"],
+    ["辰", "酉"], ["巳", "申"], ["午", "未"]
+  ],
+
+  // 暗合（例如：子未、丑午、寅巳、卯辰等）
+  zhiAnHePairs: [
+    ["子", "未"], ["丑", "午"], ["寅", "巳"],
+    ["卯", "辰"], ["申", "亥"], ["酉", "戌"]
+  ],
+
+  // 三刑組（子卯、寅巳申、丑戌未）
+  zhiXingTriples: [
+    ["子", "卯"], ["寅", "巳", "申"], ["丑", "戌", "未"]
+  ]
+};
 
 
 /////////////////// 補充：年干推月干 //////////////////////
@@ -3701,649 +3785,590 @@ getComplexRelation(monthElement, dayElement, timeElement, monthGZ, dayGZ, timeGa
   
  const destinyPool = [
 // ==== 稀有命格 ====
-// 童男童女命：日干為甲乙，月支為春三月（寅卯辰）為木旺之地
-{ name: "童男童女命", chance: 15, condition: c =>
-  ["甲", "乙"].includes(c.dayGZ.gan) &&
-  ["寅", "卯", "辰"].includes(c.monthGZ.zhi) &&
-  ["木"].includes(c.dayElement)
-},
-// 【出處】坊間流傳與《三命通會》結合春木旺者清純如童子
+{ name: "童男童女命", chance: 15, condition: c => ["甲", "乙"].includes(c.dayGZ.gan) && ["寅", "卯", "辰"].includes(c.monthGZ.zhi) && c.dayElement === "木" && ["陽"].includes(setup.destinySystem.ganYinYang[c.dayGZ.gan]) }, // 【出處】坊間流傳與《三命通會》結合春木旺者清純如童子
+{ name: "至陰命", chance: 10, condition: c => c.dayGZ.gan === "癸" && ["亥", "子", "丑"].includes(c.monthGZ.zhi) && ["子", "丑", "亥"].includes(c.timeZhi) && ["癸", "壬"].includes(c.timeGan) && [c.monthNaYin, c.dayNaYin, c.timeNaYin].some(n => n.includes("水")) && c.monthElement === "水" && !["丙", "丁", "午"].includes(c.monthGZ.gan) && setup.destinySystem.ganYinYang[c.dayGZ.gan] === "陰" }, // 【出處】《滴天髓》癸水為至陰，寒水用丙，若見丙則破格
+{ name: "至陽命", chance: 15, condition: c => c.dayGZ.gan === "甲" && ["午", "未", "申"].includes(c.timeZhi) && ["甲", "丙", "戊", "庚", "壬"].includes(c.timeGan) && setup.destinySystem.ganYinYang[c.dayGZ.gan] === "陽" }, // 【出處】《子平真詮》：甲日最旺見午申者陽氣最盛
+{ name: "天乙貴人命", chance: 10, condition: c => ["甲", "乙", "丙", "丁"].includes(c.dayGZ.gan) && c.relationMonthTime === "我生" && c.hasZhengYin && ["陰", "陽"].includes(setup.destinySystem.ganYinYang[c.dayGZ.gan]) }, // 【出處】《三命通會》《子平粹言》天乙貴人為生我之印
+{ name: "天煞孤星命", chance: 8, condition: c => ["金", "水"].includes(c.timeElement) && c.monthElement === "水" && !["火", "土"].includes(c.dayElement) && !["火", "土"].includes(c.timeElement) && c.dayStrength < 3 }, // 【出處】《神峰通考》孤星命多金水旺，身寒無助
+{ name: "紅顏禍水命", chance: 8, condition: c => ["庚", "辛"].includes(c.dayGZ.gan) && ["子", "午", "酉", "卯"].includes(c.timeZhi) && ["金", "火", "水"].includes(c.dayElement) && c.tenGodsInTimeZhi.some(t => t.tenGod === "桃花") }, // 【出處】民間命術：「紅顏多金火帶桃花，富貴亦多災」
+{ name: "劍鋒金命", chance: 10, condition: c => [c.monthNaYin, c.dayNaYin, c.timeNaYin].includes("劍鋒金") && ["庚", "辛"].includes(c.dayGZ.gan) && [c.dayGZ.zhi, c.monthGZ.zhi, c.timeZhi].some(zhi => setup.destinySystem.zhiCangGan[zhi]?.some(g => ["庚", "辛"].includes(g))) }, // 【出處】《三命通會》劍鋒金見庚辛成器之命，須得火煉方吉
+{ name: "霹靂火命", chance: 10, condition: c => [c.monthNaYin, c.dayNaYin, c.timeNaYin].includes("霹靂火") && ["寅", "卯", "巳"].includes(c.dayGZ.zhi) && ["巳", "午", "未"].includes(c.timeZhi) && c.dayElement === "火" }, // 【出處】《五行大義》霹靂火必藉木生方能發威，木火旺地成格
+{ name: "龍鳳呈祥命", chance: 8, condition: c => c.monthGZ.gan === c.dayGZ.gan && ["子", "午", "卯", "酉"].includes(c.dayGZ.zhi) && setup.destinySystem.getRelation(setup.destinySystem.tianGanToFiveElement[c.monthGZ.gan], setup.destinySystem.tianGanToFiveElement[c.dayGZ.gan]) === "同氣" && setup.destinySystem.ganYinYang[c.monthGZ.gan] === setup.destinySystem.ganYinYang[c.dayGZ.gan] }, // 【出處】坊間格局，男女八字皆相輔為龍鳳呈祥格
+{ name: "三奇命", chance: 6, condition: c => ["乙", "丙", "丁"].includes(c.monthGZ.gan) && c.monthGZ.gan === c.dayGZ.gan && c.dayGZ.gan === c.timeGan && setup.destinySystem.getRelation(setup.destinySystem.tianGanToFiveElement[c.monthGZ.gan], setup.destinySystem.tianGanToFiveElement[c.dayGZ.gan]) === "我生" && setup.destinySystem.ganYinYang[c.dayGZ.gan] === "陽" }, // 【出處】《三奇甲乙》三奇連珠，日主得旺生為貴格
+{ name: "福星高照命", chance: 12, condition: c => c.relations.filter(r => r === "生我").length >= 2 && (c.hasZhengYin || c.hasShiShen || c.hasBiJian) }, // 【出處】現代命理學分析五行生我為助力，兩處以上即吉格
+{ name: "桃花煞命", chance: 10, condition: c => ["申", "子", "辰"].includes(c.monthGZ.zhi) && ["子", "午", "卯", "酉"].includes(c.dayGZ.zhi) && ["子", "午", "卯", "酉"].includes(c.timeZhi) }, // 【出處】《三命通會》桃花煞多見於子午卯酉日配三合支
+{ name: "八面玲瓏命", chance: 8, condition: c => c.monthElement === c.dayElement && (c.hasZhengYin || c.hasShiShen) && c.relations.includes("同氣") }, // 【出處】日主得印或食者為多才之命
+{ name: "文昌貴人命", chance: 15, condition: c => c.dayGZ.gan === "乙" && ["寅", "卯"].includes(c.monthGZ.zhi) && c.monthElement === "木" && c.tenGodsInMonthZhi.some(t => t.tenGod === "祿") }, // 【出處】《三命通會》乙木得寅卯為貴，文昌現於祿地
+{ name: "天魁星命", chance: 15, condition: c => ["甲", "丙"].includes(c.dayGZ.gan) && c.timeZhi === "午" && c.relations.includes("生我") && c.hasZhengYin }, // 【出處】《星平會海》《子平粹言》魁星掌文運，以午為尊貴時
 
-// 至陰命：癸水日干，三寒月支，夜生，藏干皆陰水，納音屬水
-{ name: "至陰命", chance: 10, condition: c =>
-  c.dayGZ.gan === "癸" &&
-  ["亥", "子", "丑"].includes(c.monthGZ.zhi) &&
-  ["子", "丑", "亥"].includes(c.timeZhi) &&
-  ["癸", "壬"].includes(c.timeGan) &&
-  [c.monthNaYin, c.dayNaYin, c.timeNaYin].some(n => n.includes("水")) &&
-  ["水"].includes(c.monthElement) &&
-  !["丙", "丁", "午"].includes(c.monthGZ.gan)
-},
-// 【出處】《滴天髓》癸水為至陰，寒水用丙，若見丙則破格
-
-// 至陽命：甲木日主，午未申為陽旺時支，日時皆陽干
-{ name: "至陽命", chance: 15, condition: c =>
-  c.dayGZ.gan === "甲" &&
-  ["午", "未", "申"].includes(c.timeZhi) &&
-  ["甲", "丙", "戊", "庚", "壬"].includes(c.timeGan)
-},
-// 【出處】《子平真詮》：甲日最旺見午申者陽氣最盛
-
-// 天乙貴人命：日主甲乙丙丁，時支與月柱五行相生
-{ name: "天乙貴人命", chance: 10, condition: c =>
-  ["甲", "乙", "丙", "丁"].includes(c.dayGZ.gan) &&
-  c.relationMonthTime === "我生" &&
-  c.hasZhengYin
-},
-// 【出處】《三命通會》與《子平粹言》：天乙貴人為生我之印
-
-// 天煞孤星命：金水格而孤，金旺水生，八字中金水成局，無火土
-{ name: "天煞孤星命", chance: 8, condition: c =>
-  ["金", "水"].includes(c.timeElement) &&
-  ["水"].includes(c.monthElement) &&
-  !["火", "土"].includes(c.dayElement) &&
-  !["火", "土"].includes(c.timeElement)
-},
-// 【出處】《神峰通考》孤星命多金水旺，身寒無助
-
-// 紅顏禍水命：庚辛日生，遇桃花地或火水太旺
-{ name: "紅顏禍水命", chance: 8, condition: c =>
-  ["庚", "辛"].includes(c.dayGZ.gan) &&
-  ["子", "午", "酉", "卯"].includes(c.timeZhi) &&
-  ["金", "火", "水"].includes(c.dayElement)
-},
-// 【出處】民間命術：「紅顏多金火帶桃花，富貴亦多災」
-
-// 劍鋒金命：納音為劍鋒金，且日干為庚辛，支中藏干有庚辛
-{ name: "劍鋒金命", chance: 10, condition: c =>
-  [c.monthNaYin, c.dayNaYin, c.timeNaYin].includes("劍鋒金") &&
-  ["庚", "辛"].includes(c.dayGZ.gan) &&
-  [c.dayGZ.zhi, c.monthGZ.zhi, c.timeZhi].some(zhi =>
-    setup.destinySystem.zhiCangGan[zhi]?.includes("庚") || setup.destinySystem.zhiCangGan[zhi]?.includes("辛")
-  )
-},
-// 【出處】《三命通會》：劍鋒金見庚辛成器之命，須得火煉方吉
-
-// 霹靂火命：納音為霹靂火，日支見寅卯巳，時支亦見火地
-{ name: "霹靂火命", chance: 10, condition: c =>
-  [c.monthNaYin, c.dayNaYin, c.timeNaYin].includes("霹靂火") &&
-  ["寅", "卯", "巳"].includes(c.dayGZ.zhi) &&
-  ["巳", "午", "未"].includes(c.timeZhi)
-},
-// 【出處】《五行大義》霹靂火必藉木生方能發威，木火旺地成格
-
-// 龍鳳呈祥命：月干、日干相同，日支見桃花（子午卯酉），納音相生
-{ name: "龍鳳呈祥命", chance: 8, condition: c =>
-  c.monthGZ.gan === c.dayGZ.gan &&
-  ["子", "午", "卯", "酉"].includes(c.dayGZ.zhi) &&
-  setup.destinySystem.getRelation(
-    setup.destinySystem.tianGanToFiveElement[c.monthGZ.gan],
-    setup.destinySystem.tianGanToFiveElement[c.dayGZ.gan]
-  ) === "同氣"
-},
-// 【出處】坊間格局，男女八字皆相輔為龍鳳呈祥格
-
-// 三奇命：三干皆奇（乙丙丁），且依序相生
-{ name: "三奇命", chance: 6, condition: c =>
-  ["乙", "丙", "丁"].includes(c.monthGZ.gan) &&
-  c.monthGZ.gan === c.dayGZ.gan &&
-  c.dayGZ.gan === c.timeGan &&
-  setup.destinySystem.getRelation(
-    setup.destinySystem.tianGanToFiveElement[c.monthGZ.gan],
-    setup.destinySystem.tianGanToFiveElement[c.dayGZ.gan]
-  ) === "我生"
-},
-// 【出處】《三奇甲乙》：三奇連珠，日主得旺生為貴格
-
-// 福星高照命：月日時三柱，至少兩柱為「生我」之五行
-{ name: "福星高照命", chance: 12, condition: c =>
-  c.relations.filter(r => r === "生我").length >= 2
-},
-// 【出處】現代命理學分析五行生我為助力，兩處以上即吉格
-
-// 桃花煞命：月支為申子辰三合桃花局，日支亦為桃花地
-{ name: "桃花煞命", chance: 10, condition: c =>
-  ["申", "子", "辰"].includes(c.monthGZ.zhi) &&
-  ["子", "午", "卯", "酉"].includes(c.dayGZ.zhi)
-},
-// 【出處】《三命通會》桃花煞多見於子午卯酉日配三合支
-
-// 八面玲瓏命：月日五行一致，且時支藏干含「印」或「食神」
-{ name: "八面玲瓏命", chance: 8, condition: c =>
-  c.monthElement === c.dayElement &&
-  c.hasZhengYin || c.hasShiShen
-},
-// 【出處】日主得印或食者為多才之命
-
-// 文昌貴人命：乙木日生，寅卯為祿地，且藏干有甲乙，書香之命
-{ name: "文昌貴人命", chance: 15, condition: c =>
-  c.dayGZ.gan === "乙" &&
-  ["寅", "卯"].includes(c.monthGZ.zhi) &&
-  ["木"].includes(c.monthElement)
-},
-// 【出處】《三命通會》：「乙木得寅卯為貴，文昌現於祿地」
-
-// 天魁星命：甲丙日主，午時生旺，得官祿之位，且有「生我」干支
-{ name: "天魁星命", chance: 15, condition: c =>
-  ["甲", "丙"].includes(c.dayGZ.gan) &&
-  c.timeZhi === "午" &&
-  c.relations.includes("生我")
-},
-// 【出處】《星平會海》與《子平粹言》：魁星掌文運，以午為尊貴時
-
-// 三奇貴格命：乙丙丁為三奇，申酉戌為官祿地，巳為火生土旺之地
-{ name: "三奇貴格命", chance: 8, condition: c =>
-  ["乙", "丙", "丁"].includes(c.dayGZ.gan) &&
-  ["申", "酉", "戌"].includes(c.monthGZ.zhi) &&
-  c.timeZhi === "巳" &&
-  ["火", "土"].includes(c.monthElement)
-},
-// 【出處】《三奇秘訣》：「三奇遇官祿地，生火者為貴」
-
-// 十干禍福命：丁日主、亥月為傷官見官，壬時干為官星
-{ name: "十干禍福命", chance: 8, condition: c =>
-  c.dayGZ.gan === "丁" &&
-  c.monthGZ.zhi === "亥" &&
-  c.timeGan === "壬" &&
-  c.relationMonthTime === "我剋"
-},
-// 【出處】《子平真詮》：「丁日見亥月為傷官，壬水為官星，傷官見官為禍福之格」
-
-// 暗合命：子丑、午未為地支暗合，日支與時支暗中成局
-{ name: "暗合命", chance: 6, condition: c =>
-  (c.dayGZ.zhi === "子" && c.timeZhi === "丑") ||
-  (c.dayGZ.zhi === "午" && c.timeZhi === "未") ||
-  (c.dayGZ.zhi === "酉" && c.timeZhi === "戌")
-},
-// 【出處】《三命通會》：「地支暗合，隱藏感情或機運，非顯貴之象」
-
-// 孤陰不生命：全局陰干陰支居多，月五行屬陰（木水）
-{ name: "孤陰不生命", chance: 7, condition: c =>
-  ["癸", "乙", "丁"].includes(c.dayGZ.gan) &&
-  ["陰", "水", "木"].includes(c.monthElement) &&
-  ["陰"].includes(setup.destinySystem.ganYinYang[c.dayGZ.gan])
-},
-// 【出處】《命理探源》：「全陰者無陽助，孤陰不生，性情孤絕」
-
-// 陽剛極命：日干甲丙戊為陽，寅午戌三合火局為陽旺，且五行為陽
-{ name: "陽剛極命", chance: 7, condition: c =>
-  ["甲", "丙", "戊"].includes(c.dayGZ.gan) &&
-  ["寅", "午", "戌"].includes(c.monthGZ.zhi) &&
-  ["陽"].includes(setup.destinySystem.ganYinYang[c.dayGZ.gan])
-},
-// 【出處】《子平粹言》：「三陽成局，剛烈無比，為陽剛命」
-
-// 干支皆陰命：天干地支皆陰，日月時皆陰干，支為陰支
-{ name: "干支皆陰命", chance: 6, condition: c =>
-  ["乙", "丁", "己", "辛", "癸"].includes(c.dayGZ.gan) &&
-  ["丑", "未", "亥"].includes(c.monthGZ.zhi) &&
-  ["丁", "己", "癸"].includes(c.timeGan) &&
-  ["陰"].includes(setup.destinySystem.ganYinYang[c.dayGZ.gan])
-},
-// 【出處】《滴天髓》：「純陰之命，多思少行，易偏激」
-
-// 華蓋入命：四墓地為辰戌丑未，庚辛日生得孤星，主孤高
-{ name: "華蓋入命", chance: 6, condition: c =>
-  ["辰", "戌", "丑", "未"].includes(c.timeZhi) &&
-  ["庚", "辛"].includes(c.dayGZ.gan) &&
-  ["土"].includes(c.timeElement)
-},
-// 【出處】《三命通會》：「四墓為蓋，見之主聰明孤高，適合藝術命」
-
-// 魁罡命：庚日生於辰戌丑未日支，主剛毅、孤克、貴重之命
-{ name: "魁罡命", chance: 6, condition: c =>
-  c.dayGZ.gan === "庚" &&
-  ["辰", "戌", "丑", "未"].includes(c.dayGZ.zhi)
-},
-// 【出處】《神峰通考》：「魁罡日生者，性剛氣烈，主武貴或剋親」
-
-// 純陽命：干支皆為陽，五行日主也為陽五行
-{ name: "純陽命", chance: 5, condition: c =>
-  ["甲", "丙", "戊", "庚", "壬"].includes(c.dayGZ.gan) &&
-  ["寅", "辰", "午", "申", "戌"].includes(c.monthGZ.zhi) &&
-  ["陽"].includes(setup.destinySystem.ganYinYang[c.dayGZ.gan])
-},
-// 【出處】《命理正宗》：「純陽命剛烈孤直，男命成名，女命剋夫」
-
-// 純陰命：干支皆為陰，日主為陰干，地支多為陰地
-{ name: "純陰命", chance: 5, condition: c =>
-  ["乙", "丁", "己", "辛", "癸"].includes(c.dayGZ.gan) &&
-  ["丑", "卯", "巳", "未", "酉", "亥"].includes(c.monthGZ.zhi) &&
-  ["陰"].includes(setup.destinySystem.ganYinYang[c.dayGZ.gan])
-},
-// 【出處】《三命通會》：「純陰者柔順多愁，陰盛則孤」
+{ name: "三奇貴格命", chance: 8, condition: c => ["乙", "丙", "丁"].includes(c.dayGZ.gan) && ["申", "酉", "戌"].includes(c.monthGZ.zhi) && c.timeZhi === "巳" && ["火", "土"].includes(c.monthElement) && setup.destinySystem.getGanYinYang(c.dayGZ.gan) === "陽" }, // 【出處】《三奇秘訣》三奇遇官祿地，生火者為貴
+{ name: "十干禍福命", chance: 8, condition: c => c.dayGZ.gan === "丁" && c.monthGZ.zhi === "亥" && c.timeGan === "壬" && c.relationMonthTime === "我剋" && c.relations.includes("我剋") && c.hasZhengGuan }, // 【出處】《子平真詮》丁日見亥月為傷官，壬水為官星，傷官見官為禍福之格
+{ name: "暗合命", chance: 6, condition: c => (c.dayGZ.zhi === "子" && c.timeZhi === "丑") || (c.dayGZ.zhi === "午" && c.timeZhi === "未") || (c.dayGZ.zhi === "酉" && c.timeZhi === "戌") }, // 【出處】《三命通會》地支暗合，隱藏感情或機運，非顯貴之象
+{ name: "孤陰不生命", chance: 7, condition: c => ["癸", "乙", "丁"].includes(c.dayGZ.gan) && ["陰", "水", "木"].includes(c.monthElement) && setup.destinySystem.ganYinYang[c.dayGZ.gan] === "陰" && c.relations.every(r => r !== "同氣") }, // 【出處】《命理探源》全陰者無陽助，孤陰不生，性情孤絕
+{ name: "陽剛極命", chance: 7, condition: c => ["甲", "丙", "戊"].includes(c.dayGZ.gan) && ["寅", "午", "戌"].includes(c.monthGZ.zhi) && setup.destinySystem.ganYinYang[c.dayGZ.gan] === "陽" && c.relations.includes("同氣") }, // 【出處】《子平粹言》三陽成局，剛烈無比，為陽剛命
+{ name: "干支皆陰命", chance: 6, condition: c => ["乙", "丁", "己", "辛", "癸"].includes(c.dayGZ.gan) && ["丑", "未", "亥"].includes(c.monthGZ.zhi) && ["丁", "己", "癸"].includes(c.timeGan) && setup.destinySystem.ganYinYang[c.dayGZ.gan] === "陰" && setup.destinySystem.zhiYinYang[c.dayGZ.zhi] === "陰" }, // 【出處】《滴天髓》純陰之命，多思少行，易偏激
+{ name: "華蓋入命", chance: 6, condition: c => ["辰", "戌", "丑", "未"].includes(c.timeZhi) && ["庚", "辛"].includes(c.dayGZ.gan) && c.timeElement === "土" && c.relations.includes("我生") }, // 【出處】《三命通會》四墓為蓋，見之主聰明孤高，適合藝術命
+{ name: "魁罡命", chance: 6, condition: c => c.dayGZ.gan === "庚" && ["辰", "戌", "丑", "未"].includes(c.dayGZ.zhi) && c.relations.includes("我剋") }, // 【出處】《神峰通考》魁罡日生者，性剛氣烈，主武貴或剋親
+{ name: "純陽命", chance: 5, condition: c => ["甲", "丙", "戊", "庚", "壬"].includes(c.dayGZ.gan) && ["寅", "辰", "午", "申", "戌"].includes(c.monthGZ.zhi) && setup.destinySystem.ganYinYang[c.dayGZ.gan] === "陽" && setup.destinySystem.zhiYinYang[c.dayGZ.zhi] === "陽" }, // 【出處】《命理正宗》純陽命剛烈孤直，男命成名，女命剋夫
+{ name: "純陰命", chance: 5, condition: c => ["乙", "丁", "己", "辛", "癸"].includes(c.dayGZ.gan) && ["丑", "卯", "巳", "未", "酉", "亥"].includes(c.monthGZ.zhi) && setup.destinySystem.ganYinYang[c.dayGZ.gan] === "陰" && setup.destinySystem.zhiYinYang[c.dayGZ.zhi] === "陰" }, // 【出處】《三命通會》純陰者柔順多愁，陰盛則孤
+{ name: "孤辰入命", chance: 8, condition: c => ["寅", "辰", "戌"].includes(c.dayGZ.zhi) && ["申", "午", "巳"].includes(c.timeZhi) && !c.relations.includes("同氣") }, // 【出處】《三命通會》《神峰通考》：孤辰星主孤獨離群，身弱者尤忌。
+{ name: "寡宿臨命", chance: 7, condition: c => ["子", "午", "卯"].includes(c.dayGZ.zhi) && ["酉", "亥", "丑"].includes(c.timeZhi) && c.hasPianYin && !c.hasZhengYin && c.relations.includes("我生") }, // 【出處】《滴天髓》：寡宿主孤寒無依，偏印見之，主孤高淡泊。
+{ name: "天乙化忌命", chance: 6, condition: c => c.hasZhengYin && c.hasQiSha && c.relations.includes("剋我") && ["酉", "亥"].includes(c.timeZhi) && c.relationTimeDay === "剋我" }, // 【出處】《子平真詮》：「天乙貴人逢七殺則化為忌神」，主貴中藏險。
+{ name: "陰陽乖戾命", chance: 6, condition: c => setup.destinySystem.ganYinYang[c.dayGZ.gan] !== setup.destinySystem.zhiYinYang[c.dayGZ.zhi] && c.hasQiSha && c.relations.includes("剋我") }, // 【出處】《命理探源》：「干支陰陽相背，性格孤烈偏激，易生衝突。」
+{ name: "亡神入命", chance: 5, condition: c => ["辰", "戌", "丑", "未"].includes(c.dayGZ.zhi) && ["酉", "亥"].includes(c.timeZhi) && c.relations.includes("剋我") && !c.hasZhengYin }, // 【出處】《神峰通考》：「亡神入命，主破耗驟變，多成多敗。」
 
 
-
-// ==== 納音命格 ====
-// 依據《三命通會》等古籍納音五行分類命格，納音五行共十二類，以下為其中常見名稱及條件
 // ==== 納音稀有命格（傳統格局強化）====
-// 依據《三命通會》等古籍納音五行分類命格，納音五行共十二類，以下為更嚴格且具代表性的稀有命格
-
-{ name: "松柏涵秀命", chance: 12, condition: c =>
-  // 日、月納音皆為松柏木，且時納音為桑柘木或松柏木，象徵木氣充盈
-  (c.dayNaYin === "松柏木" && c.monthNaYin === "松柏木") &&
-  ["松柏木", "桑柘木"].includes(c.timeNaYin)
-},
-// 【出處】《三命通會》松柏涵秀，文昌旺盛
-
-{ name: "長流水貴命", chance: 12, condition: c =>
-  // 日納音為長流水，且月或時納音為天河水或澗下水，水勢連綿不斷
-  c.dayNaYin === "長流水" &&
-  ["天河水", "澗下水"].some(v => v === c.monthNaYin || v === c.timeNaYin)
-},
-// 【出處】《滴天髓》長流水遇水旺之地，福祿綿長
-
-{ name: "砂中金貴格", chance: 12, condition: c =>
-  // 日納音砂中金，月時納音為白蠟金或海中金，金氣相生
-  c.dayNaYin === "砂中金" &&
-  ["白蠟金", "海中金", "砂中金"].includes(c.monthNaYin) &&
-  ["白蠟金", "海中金", "砂中金"].includes(c.timeNaYin)
-},
-// 【出處】《三命通會》砂中金遇金生者，堅韌有力
-
-{ name: "大林木命", chance: 12, condition: c =>
-  // 日納音大林木，且時納音為桑柘木或松柏木，木氣旺盛
-  c.dayNaYin === "大林木" &&
-  ["桑柘木", "松柏木"].includes(c.timeNaYin)
-},
-// 【出處】《五行大義》大林木需木生相助，方成大器
-
-{ name: "澗下水文昌命", chance: 12, condition: c =>
-  // 日納音澗下水，月支為乙木祿地（寅卯），時納音屬水，文昌旺盛
-  c.dayNaYin === "澗下水" &&
-  c.monthGZ.gan === "乙" &&
-  ["寅", "卯"].includes(c.monthGZ.zhi) &&
-  ["澗下水", "天河水", "長流水"].includes(c.timeNaYin)
-},
-// 【出處】《三命通會》澗下水得木生，文昌顯達
-
-{ name: "壁上土貴命", chance: 12, condition: c =>
-  // 日納音壁上土，月或時納音為城頭土或路旁土，土氣連綿，福祿厚重
-  c.dayNaYin === "壁上土" &&
-  ["城頭土", "路旁土"].some(v => v === c.monthNaYin || v === c.timeNaYin)
-},
-// 【出處】《命理探源》壁上土遇相鄰土生者，福祿雙收
-
-{ name: "城頭土壽命", chance: 12, condition: c =>
-  // 日納音城頭土，且月時納音有路旁土或壁上土，土氣穩重
-  c.dayNaYin === "城頭土" &&
-  ["路旁土", "壁上土"].includes(c.monthNaYin) &&
-  ["路旁土", "壁上土"].includes(c.timeNaYin)
-},
-// 【出處】《三命通會》城頭土遇土旺，壽元綿長
-
-{ name: "白蠟金貴命", chance: 12, condition: c =>
-  // 日納音白蠟金，月納音海中金，時納音砂中金，金氣相輔相成
-  c.dayNaYin === "白蠟金" &&
-  c.monthNaYin === "海中金" &&
-  c.timeNaYin === "砂中金"
-},
-// 【出處】《三命通會》白蠟金遇金旺，財富顯赫
-
-{ name: "海中金將星", chance: 12, condition: c =>
-  // 日納音海中金，時納音砂中金或白蠟金，且日支藏干有庚辛金
-  c.dayNaYin === "海中金" &&
-  ["砂中金", "白蠟金"].includes(c.timeNaYin) &&
-  setup.destinySystem.zhiCangGan[c.dayGZ.zhi]?.some(g => ["庚", "辛"].includes(g))
-},
-// 【出處】《三命通會》海中金遇金生者，堅強有力
-
-{ name: "路旁土福星", chance: 12, condition: c =>
-  // 日納音路旁土，月時納音壁上土或城頭土，福祿厚重
-  c.dayNaYin === "路旁土" &&
-  ["壁上土", "城頭土"].includes(c.monthNaYin) &&
-  ["壁上土", "城頭土"].includes(c.timeNaYin)
-},
-// 【出處】《命理探源》路旁土遇相近土，福祿綿長
-
-{ name: "桑柘木文昌", chance: 12, condition: c =>
-  // 日納音桑柘木，月支為寅卯木旺，時納音松柏木或大林木，文昌有氣
-  c.dayNaYin === "桑柘木" &&
-  ["寅", "卯"].includes(c.monthGZ.zhi) &&
-  ["松柏木", "大林木"].includes(c.timeNaYin)
-},
-// 【出處】《三命通會》桑柘木得木旺，文昌顯達
-
-{ name: "天河水情緣", chance: 12, condition: c =>
-  // 日納音天河水，月或時支為桃花地申子辰，情緣豐富
-  c.dayNaYin === "天河水" &&
-  (["申", "子", "辰"].includes(c.monthGZ.zhi) || ["申", "子", "辰"].includes(c.timeZhi))
-},
-// 【出處】《三命通會》天河水遇桃花局，情運佳
-
+{ name: "松柏涵秀命", chance: 12, condition: c => c.dayNaYin === "松柏木" && c.monthNaYin === "松柏木" && ["松柏木", "桑柘木"].includes(c.timeNaYin) }, // 【出處】《三命通會》松柏涵秀，文昌旺盛
+{ name: "長流水貴命", chance: 12, condition: c => c.dayNaYin === "長流水" && ["天河水", "澗下水"].includes(c.monthNaYin) || ["天河水", "澗下水"].includes(c.timeNaYin) }, // 【出處】《滴天髓》長流水遇水旺之地，福祿綿長
+{ name: "砂中金貴格", chance: 12, condition: c => c.dayNaYin === "砂中金" && ["白蠟金", "海中金", "砂中金"].includes(c.monthNaYin) && ["白蠟金", "海中金", "砂中金"].includes(c.timeNaYin) }, // 【出處】《三命通會》砂中金遇金生者，堅韌有力
+{ name: "大林木命", chance: 12, condition: c => c.dayNaYin === "大林木" && ["桑柘木", "松柏木"].includes(c.timeNaYin) }, // 【出處】《五行大義》大林木需木生相助，方成大器
+{ name: "澗下水文昌命", chance: 12, condition: c => c.dayNaYin === "澗下水" && c.monthGZ.gan === "乙" && ["寅", "卯"].includes(c.monthGZ.zhi) && ["澗下水", "天河水", "長流水"].includes(c.timeNaYin) }, // 【出處】《三命通會》澗下水得木生，文昌顯達
+{ name: "壁上土貴命", chance: 12, condition: c => c.dayNaYin === "壁上土" && ["城頭土", "路旁土"].includes(c.monthNaYin) || ["城頭土", "路旁土"].includes(c.timeNaYin) }, // 【出處】《命理探源》壁上土遇相鄰土生者，福祿雙收
+{ name: "城頭土壽命", chance: 12, condition: c => c.dayNaYin === "城頭土" && ["路旁土", "壁上土"].includes(c.monthNaYin) && ["路旁土", "壁上土"].includes(c.timeNaYin) }, // 【出處】《三命通會》城頭土遇土旺，壽元綿長
+{ name: "白蠟金貴命", chance: 12, condition: c => c.dayNaYin === "白蠟金" && c.monthNaYin === "海中金" && c.timeNaYin === "砂中金" }, // 【出處】《三命通會》白蠟金遇金旺，財富顯赫
+{ name: "海中金將星", chance: 12, condition: c => c.dayNaYin === "海中金" && ["砂中金", "白蠟金"].includes(c.timeNaYin) && setup.destinySystem.zhiCangGan[c.dayGZ.zhi]?.some(g => ["庚", "辛"].includes(g)) }, // 【出處】《三命通會》海中金遇金生者，堅強有力
+{ name: "路旁土福星", chance: 12, condition: c => c.dayNaYin === "路旁土" && ["壁上土", "城頭土"].includes(c.monthNaYin) && ["壁上土", "城頭土"].includes(c.timeNaYin) }, // 【出處】《命理探源》路旁土遇相近土，福祿綿長
+{ name: "桑柘木文昌", chance: 12, condition: c => c.dayNaYin === "桑柘木" && ["寅", "卯"].includes(c.monthGZ.zhi) && ["松柏木", "大林木"].includes(c.timeNaYin) }, // 【出處】《三命通會》桑柘木得木旺，文昌顯達
+{ name: "天河水情緣", chance: 12, condition: c => c.dayNaYin === "天河水" && (["申", "子", "辰"].includes(c.monthGZ.zhi) || ["申", "子", "辰"].includes(c.timeZhi)) }, // 【出處】《三命通會》天河水遇桃花局，情運佳
+   
+   
 
 // ==== 其他稀有命格 ====
 // 依據傳統命理文獻，強化條件且附出處
-{ name: "財星高照", chance: 28, condition: c =>
-  ["丙", "丁", "戊"].includes(c.dayGZ.gan) &&
-  (c.relations.includes("我生") || c.hasZhengCai)
-},
-// 【出處】《三命通會》火土日主遇財星旺盛，主財運亨通
-
-{ name: "文曲格", chance: 28, condition: c =>
-  ["乙", "丙"].includes(c.dayGZ.gan) &&
-  c.monthElement === "木" &&
-  c.hasWenQu
-},
-// 【出處】《子平真詮》乙木丙火日主，文曲星旺，主文才出眾
-
-{ name: "武曲格", chance: 28, condition: c =>
-  ["庚", "辛"].includes(c.dayGZ.gan) &&
-  c.hasWuQu
-},
-// 【出處】《神峰通考》庚辛金日主武曲星顯，主剛毅果斷
-
-{ name: "貴人扶命", chance: 28, condition: c =>
-  c.monthElement === "水" &&
-  c.hasGuiRen
-},
-// 【出處】《三命通會》水旺多貴人，命中有扶助，逢凶化吉
-
-{ name: "禍福相生", chance: 28, condition: c =>
-  c.relations.includes("剋我") &&
-  c.relations.includes("生我")
-},
-// 【出處】《滴天髓》福祿禍福交織，人生多變化
-
-{ name: "富貴雙全", chance: 26, condition: c =>
-  c.timeElement === "水" &&
-  c.hasZhengCai &&
-  c.hasGuan
-},
-// 【出處】《三命通會》時柱水旺，財官雙全，富貴榮華
-
-{ name: "官祿通達", chance: 26, condition: c =>
-  c.timeElement === "土" &&
-  c.hasGuan
-},
-// 【出處】《子平真詮》時柱土旺官星有力，仕途通達
-
-{ name: "福祿雙收", chance: 26, condition: c =>
-  c.relations.includes("我生") &&
-  c.relations.includes("生我")
-},
-// 【出處】《三命通會》生我且我生，互助相生，福祿綿長
-
-{ name: "日月同光", chance: 25, condition: c =>
-  c.relMonthDay === "同氣" &&
-  c.hasZhengYin
-},
-// 【出處】《滴天髓》月日天干同氣，印星旺，日主強旺
-
-{ name: "財官兩旺", chance: 25, condition: c =>
-  c.monthElement === "金" &&
-  c.hasZhengCai &&
-  c.hasGuan
-},
-// 【出處】《三命通會》金旺財官雙重助力，貴顯無疑
-
-{ name: "身弱逢財", chance: 24, condition: c =>
-  c.relations.includes("剋我") &&
-  c.hasZhengCai
-},
-// 【出處】《子平真詮》身弱但得財星生扶，有助發展
-
-{ name: "印星護命", chance: 24, condition: c =>
-  c.monthElement === "土" &&
-  c.hasZhengYin
-},
-// 【出處】《滴天髓》土旺印星守護，福祿綿長
-
-{ name: "桃花得地", chance: 25, condition: c =>
-  ["卯", "酉"].includes(c.monthGZ.zhi) ||
-  ["卯", "酉"].includes(c.dayGZ.zhi)
-},
-// 【出處】《三命通會》桃花得地，多見情緣桃花
-
-{ name: "官星顯旺", chance: 24, condition: c =>
-  c.dayGZ.gan === "戊" &&
-  c.hasGuan
-},
-// 【出處】《子平真詮》戊土日主官星旺，仕途順遂
-
-{ name: "印綬相隨", chance: 24, condition: c =>
-  c.dayElement === "木" &&
-  c.hasZhengYin
-},
-// 【出處】《三命通會》木日主印綬旺，福澤深厚
-
-{ name: "比肩爭榮", chance: 24, condition: c =>
-  c.dayElement === c.timeElement &&
-  c.hasBiJian
-},
-// 【出處】《滴天髓》同五行比肩，競爭助力並存
-
-{ name: "天喜臨門", chance: 22, condition: c =>
-  c.timeElement === "木" &&
-  c.hasTianXi
-},
-// 【出處】《神峰通考》天喜入命，吉祥喜慶
-
-{ name: "文昌在命", chance: 22, condition: c =>
-  c.monthElement === "木" &&
-  c.hasWenChang
-},
-// 【出處】《三命通會》月柱木旺，文昌星顯，主才華出眾
-
-{ name: "財印雙全", chance: 25, condition: c =>
-  c.hasZhengCai &&
-  c.hasZhengYin
-},
-// 【出處】《滴天髓》財印相生，格局良好，福運雙至
-
-{ name: "三合貴格", chance: 20, condition: c =>
-  ["申", "子", "辰"].includes(c.monthGZ.zhi) &&
-  ["寅", "午", "戌"].includes(c.dayGZ.zhi) &&
-  c.hasSanHe
-},
-// 【出處】《三命通會》三合局得貴氣，仕途榮華
+{ name: "財星高照", chance: 28, condition: c => ["丙", "丁", "戊"].includes(c.dayGZ.gan) && (c.relations.includes("我生") || c.hasZhengCai) && c.relations.includes("我剋") }, // 【出處】《三命通會》火土日主遇財星旺盛，主財運亨通
+{ name: "文曲格", chance: 28, condition: c => ["乙", "丙"].includes(c.dayGZ.gan) && c.monthElement === "木" && c.hasWenQu && c.relations.includes("我生") }, // 【出處】《子平真詮》乙木丙火日主，文曲星旺，主文才出眾
+{ name: "武曲格", chance: 28, condition: c => ["庚", "辛"].includes(c.dayGZ.gan) && c.hasWuQu && c.relations.includes("我剋") }, // 【出處】《神峰通考》庚辛金日主武曲星顯，主剛毅果斷
+{ name: "貴人扶命", chance: 28, condition: c => c.monthElement === "水" && c.hasGuiRen && c.relations.includes("生我") }, // 【出處】《三命通會》水旺多貴人，命中有扶助，逢凶化吉
+{ name: "禍福相生", chance: 28, condition: c => c.relations.includes("剋我") && c.relations.includes("生我") }, // 【出處】《滴天髓》福祿禍福交織，人生多變化
+{ name: "富貴雙全", chance: 26, condition: c => c.timeElement === "水" && c.hasZhengCai && c.hasGuan && c.relations.includes("我剋") && c.relations.includes("剋我") }, // 【出處】《三命通會》時柱水旺，財官雙全，富貴榮華
+{ name: "官祿通達", chance: 26, condition: c => c.timeElement === "土" && c.hasGuan && c.relations.includes("剋我") }, // 【出處】《子平真詮》時柱土旺官星有力，仕途通達
+{ name: "福祿雙收", chance: 26, condition: c => c.relations.includes("我生") && c.relations.includes("生我") }, // 【出處】《三命通會》生我且我生，互助相生，福祿綿長
+{ name: "日月同光", chance: 25, condition: c => c.relMonthDay === "同氣" && c.hasZhengYin && c.relations.includes("生我") }, // 【出處】《滴天髓》月日天干同氣，印星旺，日主強旺
+{ name: "財官兩旺", chance: 25, condition: c => c.monthElement === "金" && c.hasZhengCai && c.hasGuan && c.relations.includes("我剋") && c.relations.includes("剋我") }, // 【出處】《三命通會》金旺財官雙重助力，貴顯無疑
+{ name: "身弱逢財", chance: 24, condition: c => c.relations.includes("剋我") && c.hasZhengCai && c.isBodyWeak }, // 【出處】《子平真詮》身弱但得財星生扶，有助發展
+{ name: "印星護命", chance: 24, condition: c => c.monthElement === "土" && c.hasZhengYin && c.relations.includes("生我") }, // 【出處】《滴天髓》土旺印星守護，福祿綿長
+{ name: "桃花得地", chance: 25, condition: c => ["卯", "酉"].includes(c.monthGZ.zhi) || ["卯", "酉"].includes(c.dayGZ.zhi) }, // 【出處】《三命通會》桃花得地，多見情緣桃花
+{ name: "官星顯旺", chance: 24, condition: c => c.dayGZ.gan === "戊" && c.hasGuan && c.relations.includes("剋我") }, // 【出處】《子平真詮》戊土日主官星旺，仕途順遂
+{ name: "印綬相隨", chance: 24, condition: c => c.dayElement === "木" && c.hasZhengYin && c.relations.includes("生我") }, // 【出處】《三命通會》木日主印綬旺，福澤深厚
+{ name: "比肩爭榮", chance: 24, condition: c => c.dayElement === c.timeElement && c.hasBiJian && c.relations.includes("同氣") }, // 【出處】《滴天髓》同五行比肩，競爭助力並存
+{ name: "天喜臨門", chance: 22, condition: c => c.timeElement === "木" && c.hasTianXi && c.relations.includes("我生") }, // 【出處】《神峰通考》天喜入命，吉祥喜慶
+{ name: "文昌在命", chance: 22, condition: c => c.monthElement === "木" && c.hasWenChang && c.relations.includes("我生") }, // 【出處】《三命通會》月柱木旺，文昌星顯，主才華出眾
+{ name: "財印雙全", chance: 25, condition: c => c.hasZhengCai && c.hasZhengYin && c.relations.includes("我剋") && c.relations.includes("生我") }, // 【出處】《滴天髓》財印相生，格局良好，福運雙至
+{ name: "三合貴格", chance: 20, condition: c => ["申", "子", "辰"].includes(c.monthGZ.zhi) && ["寅", "午", "戌"].includes(c.dayGZ.zhi) && c.hasSanHe }, // 【出處】《三命通會》三合局得貴氣，仕途榮華
 
 
 
 // ==== 特殊十神格局 ====
 // 傳統十神格局與現代命理分析，條件依你系統欄位
-{ name: "建祿格", chance: 20, condition: c => c.hasBiJian },
-// 【出處】《三命通會》建祿為比肩，日主得比肩扶助，具生氣旺盛之象
-
-{ name: "七殺格", chance: 15, condition: c => c.hasQiSha },
-// 【出處】《子平真詮》七殺格以殺旺制殺，身弱為用，性格剛毅
-
-{ name: "正印格", chance: 15, condition: c => c.hasZhengYin },
-// 【出處】《滴天髓》正印旺，身強得助，學業與貴氣皆佳
-
-{ name: "食神格", chance: 18, condition: c => c.hasShiShen },
-// 【出處】《神峰通考》食神生財，主福氣與才藝發展
-
-{ name: "財星格", chance: 20, condition: c => c.hasZhengCai && c.hasBiJian },
-// 【出處】《三命通會》財星旺盛，且有比肩助力，財富穩固
-
-{ name: "偏財格", chance: 18, condition: c => c.tenGodsInMonthZhi.some(t => t.tenGod === "偏財") },
-// 【出處】《子平真詮》偏財為外財，主變動與機會多
-
-{ name: "正官格", chance: 18, condition: c => c.hasZhengGuan },
-// 【出處】《滴天髓》正官為權威，身強則仕途順利
-
-{ name: "比劫格", chance: 18, condition: c => c.hasBiJian && c.hasJieCai },
-// 【出處】《三命通會》比劫格，身弱用劫財，性格豪爽
-
-{ name: "雙財格", chance: 18, condition: c => c.hasZhengCai && c.tenGodsInMonthZhi.some(t => t.tenGod === "偏財") },
-// 【出處】《子平真詮》正財偏財兼備，財源豐盈
-
-{ name: "傷官格", chance: 20, condition: c => c.hasShangGuan && c.hasZhengCai },
-// 【出處】《滴天髓》傷官生財，主才華橫溢，性格活潑
-
-// 補充：
-// 傷官見官格（殺印相生格）
-{ name: "傷官見官格", chance: 18, condition: c => c.hasShangGuan && c.hasZhengGuan },
-// 【出處】《三命通會》傷官見官，為官場中人，能克制殺氣
-
-// 正財格
-{ name: "正財格", chance: 18, condition: c => c.hasZhengCai && !c.hasBiJian },
-// 【出處】《子平真詮》正財為主財，代表穩健的財運
-
-// 偏印格
-{ name: "偏印格", chance: 16, condition: c => c.hasPianYin },
-// 【出處】《滴天髓》偏印主學習與轉變，適合創新行業
-
-// 正官格身弱格（用殺格）
-{ name: "正官身弱用殺格", chance: 16, condition: c => c.hasZhengGuan && c.isBodyWeak && c.hasQiSha },
-// 【出處】《三命通會》身弱見殺為用，性格剛毅果斷
+{ name: "建祿格", chance: 20, condition: c => c.hasBiJian && c.relations.includes("同氣") && setup.destinySystem.getGanYinYang(c.dayGZ.gan) === setup.destinySystem.getGanYinYang(c.monthGZ.gan) },// 【出處】《三命通會》建祿為比肩，日主得比肩扶助，具生氣旺盛之象
+{ name: "七殺格", chance: 15, condition: c => c.hasQiSha && c.relations.includes("剋我") && c.isBodyWeak },// 【出處】《子平真詮》七殺格以殺旺制殺，身弱為用，性格剛毅
+{ name: "正印格", chance: 15, condition: c => c.hasZhengYin && c.relations.includes("生我") && !c.hasPianYin },// 【出處】《滴天髓》正印旺，身強得助，學業與貴氣皆佳
+{ name: "食神格", chance: 18, condition: c => c.hasShiShen && c.relations.includes("我生") && !c.hasQiSha },// 【出處】《神峰通考》食神生財，主福氣與才藝發展
+{ name: "財星格", chance: 20, condition: c => c.hasZhengCai && c.hasBiJian && c.relations.includes("我剋") && c.relations.includes("同氣") },// 【出處】《三命通會》財星旺盛，且有比肩助力，財富穩固
+{ name: "偏財格", chance: 18, condition: c => c.tenGodsInMonthZhi.some(t => t.tenGod === "偏財") && c.relations.includes("我剋") },// 【出處】《子平真詮》偏財為外財，主變動與機會多
+{ name: "正官格", chance: 18, condition: c => c.hasZhengGuan && !c.hasQiSha && c.relations.includes("剋我") },// 【出處】《滴天髓》正官為權威，身強則仕途順利
+{ name: "比劫格", chance: 18, condition: c => c.hasBiJian && c.hasJieCai && c.relations.includes("同氣") },// 【出處】《三命通會》比劫格，身弱用劫財，性格豪爽
+{ name: "雙財格", chance: 18, condition: c => c.hasZhengCai && c.tenGodsInMonthZhi.some(t => t.tenGod === "偏財") && c.relations.includes("我剋") },// 【出處】《子平真詮》正財偏財兼備，財源豐盈
+{ name: "傷官格", chance: 20, condition: c => c.hasShangGuan && c.hasZhengCai && c.relations.includes("我生") && c.relations.includes("我剋") },// 【出處】《滴天髓》傷官生財，主才華橫溢，性格活潑
+{ name: "傷官見官格", chance: 18, condition: c => c.hasShangGuan && c.hasZhengGuan && !c.hasQiSha && c.relations.includes("我生") && c.relations.includes("剋我") },// 【出處】《三命通會》傷官見官，為官場中人，能克制殺氣
+{ name: "正財格", chance: 18, condition: c => c.hasZhengCai && !c.hasBiJian && c.relations.includes("我剋") },// 【出處】《子平真詮》正財為主財，代表穩健的財運
+{ name: "偏印格", chance: 16, condition: c => c.hasPianYin && !c.hasZhengYin && c.relations.includes("生我") },// 【出處】《滴天髓》偏印主學習與轉變，適合創新行業
+{ name: "正官身弱用殺格", chance: 16, condition: c => c.hasZhengGuan && c.isBodyWeak && c.hasQiSha && c.relations.includes("剋我") },// 【出處】《三命通會》身弱見殺為用，性格剛毅果斷
 
 // ==== 十神格局（經典） ====
-{ name: "正印得祿格", chance: 30, condition: c => c.hasZhengYin && !c.hasQiSha && c.relations.includes("生我") && !c.hasShangGuan }, // 出處：《滴天髓》
-{ name: "食神生財格", chance: 33, condition: c => c.hasShiShen && c.hasZhengCai && c.relations.includes("我生") && !c.hasQiSha }, // 出處：《三命通會》
-{ name: "七殺制印格", chance: 32, condition: c => c.hasQiSha && c.hasZhengYin && !c.hasZhengGuan }, // 出處：《子平真詮》
-{ name: "偏財得祿格", chance: 30, condition: c => c.hasPianCai && c.relations.includes("我剋") && !c.hasJieCai }, // 出處：《三命會海》
-{ name: "傷官配印格", chance: 31, condition: c => c.hasShangGuan && c.hasZhengYin && !c.hasZhengCai && !c.hasZhengGuan }, // 出處：《命理約言》
-{ name: "官印雙清格", chance: 34, condition: c => c.hasZhengGuan && c.hasZhengYin && !c.hasShangGuan && !c.hasQiSha }, // 出處：《子平真詮》
-{ name: "財官雙美格", chance: 32, condition: c => c.hasZhengCai && c.hasZhengGuan && !c.hasJieCai && !c.hasBiJian }, // 出處：《命理約言》
-{ name: "殺印相生格", chance: 33, condition: c => c.hasQiSha && c.hasZhengYin && c.relations.includes("我生") }, // 出處：《滴天髓闡微》
-{ name: "比肩成格", chance: 28, condition: c => c.hasBiJian && !c.hasZhengCai && c.relations.includes("我生") }, // 出處：《窮通寶鑑》
-{ name: "劫財成勢格", chance: 29, condition: c => c.hasJieCai && !c.hasZhengYin && !c.hasZhengGuan }, // 出處：《三命通會》
+{ name: "正印得祿格", chance: 30, condition: c => c.hasZhengYin && !c.hasQiSha && c.relations.includes("生我") && !c.hasShangGuan && !c.hasPianYin }, // 出處：《滴天髓》
+{ name: "食神生財格", chance: 33, condition: c => c.hasShiShen && c.hasZhengCai && c.relations.includes("我生") && c.relations.includes("我剋") && !c.hasQiSha }, // 出處：《三命通會》
+{ name: "七殺制印格", chance: 32, condition: c => c.hasQiSha && c.hasZhengYin && !c.hasZhengGuan && c.relations.includes("剋我") }, // 出處：《子平真詮》
+{ name: "偏財得祿格", chance: 30, condition: c => c.hasPianCai && c.relations.includes("我剋") && !c.hasJieCai && c.relations.includes("同氣") }, // 出處：《三命會海》
+{ name: "傷官配印格", chance: 31, condition: c => c.hasShangGuan && c.hasZhengYin && !c.hasZhengCai && !c.hasZhengGuan && c.relations.includes("我生") && c.relations.includes("生我") }, // 出處：《命理約言》
+{ name: "官印雙清格", chance: 34, condition: c => c.hasZhengGuan && c.hasZhengYin && !c.hasShangGuan && !c.hasQiSha && c.relations.includes("剋我") && c.relations.includes("生我") }, // 出處：《子平真詮》
+{ name: "財官雙美格", chance: 32, condition: c => c.hasZhengCai && c.hasZhengGuan && !c.hasJieCai && !c.hasBiJian && c.relations.includes("我剋") && c.relations.includes("剋我") }, // 出處：《命理約言》
+{ name: "殺印相生格", chance: 33, condition: c => c.hasQiSha && c.hasZhengYin && c.relations.includes("生我") && c.relations.includes("剋我") }, // 出處：《滴天髓闡微》
+{ name: "比肩成格", chance: 28, condition: c => c.hasBiJian && !c.hasZhengCai && c.relations.includes("我生") && c.relations.includes("同氣") }, // 出處：《窮通寶鑑》
+{ name: "劫財成勢格", chance: 29, condition: c => c.hasJieCai && !c.hasZhengYin && !c.hasZhengGuan && c.relations.includes("同氣") }, // 出處：《三命通會》
+
 
 // ==== 補充特殊十神格局（含優化調整） ====
-
 // 正財格：正財旺，主穩健財運
-{ name: "正財格", chance: 18, condition: c => c.hasZhengCai && !c.hasQiSha && !c.hasShangGuan },
-// 【出處】《三命通會》正財為主財，身強則財運穩定
-
+{ name: "正財格", chance: 18, condition: c => c.hasZhengCai && !c.hasQiSha && !c.hasShangGuan && ["甲","丙","戊","庚","壬"].includes(c.dayGZ.gan) && c.relations.includes("我剋") && setup.destinySystem.getGanYinYang(c.dayGZ.gan) === setup.destinySystem.getGanYinYang(c.monthGZ.gan) },// 【出處】《三命通會》正財為主財，身強則財運穩定
 // 七殺殺印格：七殺與正印同現，殺印相生
-{ name: "七殺殺印格", chance: 15, condition: c => c.hasQiSha && c.hasZhengYin && !c.hasShangGuan },
-// 【出處】《滴天髓》七殺得印護，剛柔並濟，仕途順利
-
+{ name: "七殺殺印格", chance: 15, condition: c => c.hasQiSha && c.hasZhengYin && !c.hasShangGuan && c.relations.includes("剋我") && setup.destinySystem.getGanYinYang(c.dayGZ.gan) !== setup.destinySystem.getGanYinYang(c.monthGZ.gan) },// 【出處】《滴天髓》七殺得印護，剛柔並濟，仕途順利
 // 食神生財格：食神生正財，福祿雙全
-{ name: "食神生財格", chance: 20, condition: c => c.hasShiShen && c.hasZhengCai && !c.hasQiSha },
-// 【出處】《神峰通考》食神生財，主才華與財富兼得
-
+{ name: "食神生財格", chance: 20, condition: c => c.hasShiShen && c.hasZhengCai && !c.hasQiSha && c.relations.includes("我生") && c.relations.includes("我剋") },// 【出處】《神峰通考》食神生財，主才華與財富兼得
 // 偏印浮沉格：偏印旺無正印，主變化多，浮沉起伏
-{ name: "偏印浮沉格", chance: 15, condition: c => c.hasPianYin && !c.hasZhengYin },
-// 【出處】《三命通會》偏印孤立，主浮沉無定
-
+{ name: "偏印浮沉格", chance: 15, condition: c => c.hasPianYin && !c.hasZhengYin && setup.destinySystem.getGanYinYang(c.dayGZ.gan) !== setup.destinySystem.getGanYinYang(c.monthGZ.gan) },// 【出處】《三命通會》偏印孤立，主浮沉無定
 // 劫財爭財格：劫財與正財並現，競爭激烈
-{ name: "劫財爭財格", chance: 18, condition: c => c.hasJieCai && c.hasZhengCai },
-// 【出處】《子平真詮》劫財搶財，財運不穩，競爭明顯
-
+{ name: "劫財爭財格", chance: 18, condition: c => c.hasJieCai && c.hasZhengCai && c.relations.includes("同氣") && c.relations.includes("我剋") },// 【出處】《子平真詮》劫財搶財，財運不穩，競爭明顯
 // 比肩爭權格：比肩與七殺同時旺，權力爭奪
-{ name: "比肩爭權格", chance: 18, condition: c => c.hasBiJian && c.hasQiSha },
-// 【出處】《滴天髓》比肩助殺，爭權奪勢，性格強硬
-
+{ name: "比肩爭權格", chance: 18, condition: c => c.hasBiJian && c.hasQiSha && c.relations.includes("同氣") && c.relations.includes("剋我") },// 【出處】《滴天髓》比肩助殺，爭權奪勢，性格強硬
 // 食傷制殺格：食神或傷官制伏七殺，抑制殺氣
-{ name: "食傷制殺格", chance: 20, condition: c => (c.hasShiShen || c.hasShangGuan) && c.hasQiSha },
-// 【出處】《三命通會》食傷能制殺，主才華抑殺氣，事業佳
-
+{ name: "食傷制殺格", chance: 20, condition: c => (c.hasShiShen || c.hasShangGuan) && c.hasQiSha && c.relations.includes("我生") && c.relations.includes("剋我") },// 【出處】《三命通會》食傷能制殺，主才華抑殺氣，事業佳
 // 官殺混雜格：正官與七殺同現，官殺並用
-{ name: "官殺混雜格", chance: 15, condition: c => c.hasZhengGuan && c.hasQiSha },
-// 【出處】《滴天髓》官殺混雜，權力鬥爭多，仕途變動大
-
-// 補充：
+{ name: "官殺混雜格", chance: 15, condition: c => c.hasZhengGuan && c.hasQiSha && c.relations.filter(r => r === "剋我").length >= 2 },// 【出處】《滴天髓》官殺混雜，權力鬥爭多，仕途變動大
 // 傷官見官格：傷官與正官同現，官殺受制
-{ name: "傷官見官格", chance: 18, condition: c => c.hasShangGuan && c.hasZhengGuan && !c.hasQiSha },
-// 【出處】《三命通會》傷官見官為用，能克制七殺之煞
-
+{ name: "傷官見官格", chance: 18, condition: c => c.hasShangGuan && c.hasZhengGuan && !c.hasQiSha && c.relations.includes("我生") && c.relations.includes("剋我") },// 【出處】《三命通會》傷官見官為用，能克制七殺之煞
 // 偏財劫財格：偏財與劫財並現，競爭與機遇並存
-{ name: "偏財劫財格", chance: 18, condition: c => c.tenGodsInMonthZhi.some(t => t.tenGod === "偏財") && c.hasJieCai },
-// 【出處】《子平真詮》偏財劫財，財運波動較大
+{ name: "偏財劫財格", chance: 18, condition: c => c.tenGodsInMonthZhi.some(t => t.tenGod === "偏財") && c.hasJieCai && c.relations.includes("我剋") && c.relations.includes("同氣") },// 【出處】《子平真詮》偏財劫財，財運波動較大
+// ==== 常見命格（新增 30 條）====
+{ name: "財官傷三才", chance: 28, condition: c => c.hasZhengCai && c.hasZhengGuan && c.hasShiShen },
+{ name: "比肩食神格", chance: 26, condition: c => c.hasBiJian && c.hasShiShen && c.relations.includes("同氣") },
+{ name: "傷官見財格", chance: 25, condition: c => c.hasShangGuan && c.hasZhengCai && c.relations.includes("我剋") },
+{ name: "偏財聚氣格", chance: 27, condition: c => c.tenGodsInMonthZhi.some(t => t.tenGod === "偏財") && c.relations.includes("同氣") },
+{ name: "官星透干格", chance: 28, condition: c => c.hasZhengGuan && c.relations.includes("我剋") && !c.hasQiSha },
+{ name: "七殺透出格", chance: 27, condition: c => c.hasQiSha && c.relations.includes("我剋") && !c.hasZhengGuan },
+{ name: "偏印透干格", chance: 26, condition: c => c.hasPianYin && c.relations.includes("我生") },
+{ name: "食傷制印格", chance: 25, condition: c => (c.hasShiShen || c.hasShangGuan) && c.hasZhengYin && c.relations.includes("我生") },
+{ name: "比肩爭財格", chance: 24, condition: c => c.hasBiJian && c.hasZhengCai && c.relations.includes("同氣") && c.relations.includes("我剋") },
+{ name: "比肩生印格", chance: 24, condition: c => c.hasBiJian && c.hasZhengYin && c.relations.includes("生我") },
+{ name: "食神藏干格", chance: 23, condition: c => c.hasShiShen && setup.destinySystem.zhiCangGan[c.monthGZ.zhi]?.some(g => setup.destinySystem.getTenGod(c.dayGZ.gan, g) === "食神") },
+{ name: "財星雙重格", chance: 27, condition: c => c.hasZhengCai && c.tenGodsInMonthZhi.filter(t => t.tenGod === "偏財").length > 1 },
+{ name: "官星複合格", chance: 27, condition: c => c.hasZhengGuan && c.hasQiSha },
+{ name: "傷官透出格", chance: 26, condition: c => c.hasShangGuan && c.relations.includes("我剋") },
+{ name: "食神偏財格", chance: 26, condition: c => c.hasShiShen && c.tenGodsInMonthZhi.some(t => t.tenGod === "偏財") && c.relations.includes("我生") },
+{ name: "正財偏印格", chance: 27, condition: c => c.hasZhengCai && c.hasPianYin && c.relations.includes("生我") },
+{ name: "食印比格", chance: 25, condition: c => c.hasShiShen && c.hasZhengYin && c.hasBiJian },
+{ name: "七殺制財格", chance: 26, condition: c => c.hasQiSha && c.hasZhengCai && c.relations.includes("我剋") },
+{ name: "官殺爭權格", chance: 25, condition: c => c.hasZhengGuan && c.hasQiSha && c.relations.includes("同氣") },
+{ name: "偏財制官格", chance: 26, condition: c => c.tenGodsInMonthZhi.some(t => t.tenGod === "偏財") && c.hasZhengGuan && c.relations.includes("我剋") },
+{ name: "劫財傷官格", chance: 24, condition: c => c.hasJieCai && c.hasShangGuan && c.relations.includes("同氣") },
+{ name: "正印透出格", chance: 25, condition: c => c.hasZhengYin && c.relations.includes("生我") },
+{ name: "偏印制殺格", chance: 25, condition: c => c.hasPianYin && c.hasQiSha && c.relations.includes("生我") },
+{ name: "財官相生格", chance: 27, condition: c => c.hasZhengCai && c.hasZhengGuan && c.relations.includes("生我") },
+{ name: "七殺偏印格", chance: 26, condition: c => c.hasQiSha && c.hasPianYin && c.relations.includes("生我") },
+{ name: "雙印格", chance: 24, condition: c => c.hasZhengYin && c.hasPianYin && c.relations.includes("我生") },
+{ name: "食神傷官格", chance: 25, condition: c => c.hasShiShen && c.hasShangGuan && c.relations.includes("同氣") },
+{ name: "偏財比肩格", chance: 25, condition: c => c.tenGodsInMonthZhi.some(t => t.tenGod === "偏財") && c.hasBiJian && c.relations.includes("同氣") },
+{ name: "官星存財格", chance: 26, condition: c => c.hasZhengGuan && c.hasZhengCai && c.relations.includes("同氣") },
+{ name: "正劫平衡格", chance: 24, condition: c => c.hasJieCai && c.hasBiJian && !c.relations.includes("我剋") && c.relations.includes("同氣") },
 
 
 
+//常見//
+{ name: "財官傷三才", chance: 28, condition: c => ["甲", "乙", "丙"].includes(c.dayGZ.gan) && c.hasZhengCai && c.hasZhengGuan && c.hasShiShen && setup.destinySystem.getRelation(c.dayElement, c.monthElement) === "同氣" }, // 正財正官食神同現，日主木火得令
+{ name: "比肩食神格", chance: 26, condition: c => c.hasBiJian && c.hasShiShen && c.relations.includes("同氣") && ["甲", "丙"].includes(c.dayGZ.gan) }, // 比肩與食神同氣，日主甲丙為上
+{ name: "傷官見財格", chance: 25, condition: c => ["丙", "丁"].includes(c.dayGZ.gan) && c.hasShangGuan && c.hasZhengCai && c.relations.includes("我剋") }, // 火日傷官見庚為財
+{ name: "偏財聚氣格", chance: 27, condition: c => c.tenGodsInMonthZhi.some(t => t.tenGod === "偏財") && c.relations.includes("同氣") && c.dayElement === "水" }, // 偏財藏支為氣，日主水見火為偏財
+{ name: "官星透干格", chance: 28, condition: c => ["甲", "乙"].includes(c.dayGZ.gan) && setup.destinySystem.zhiCangGan[c.monthGZ.zhi]?.includes("己") && setup.destinySystem.getTenGod(c.dayGZ.gan, "己") === "正官" && !c.hasQiSha }, // 木日見己為官，透出清純
+{ name: "七殺透出格", chance: 27, condition: c => ["甲", "乙"].includes(c.dayGZ.gan) && setup.destinySystem.zhiCangGan[c.monthGZ.zhi]?.includes("庚") && setup.destinySystem.getTenGod(c.dayGZ.gan, "庚") === "七殺" && !c.hasZhengGuan }, // 木日見庚為七殺，獨透成格
+{ name: "偏印透干格", chance: 26, condition: c => ["戊", "己"].includes(c.dayGZ.gan) && setup.destinySystem.zhiCangGan[c.monthGZ.zhi]?.includes("癸") && setup.destinySystem.getTenGod(c.dayGZ.gan, "癸") === "偏印" }, // 土日透癸為偏印
+{ name: "食傷制印格", chance: 25, condition: c => (c.hasShiShen || c.hasShangGuan) && c.hasZhengYin && c.relations.includes("我生") && setup.destinySystem.getRelation(c.monthElement, c.dayElement) === "剋我" }, // 食傷剋印為制
+{ name: "比肩爭財格", chance: 24, condition: c => c.hasBiJian && c.hasZhengCai && c.relations.includes("同氣") && c.relations.includes("我剋") && c.dayElement === "火" }, // 火日比肩爭庚金
+{ name: "比肩生印格", chance: 24, condition: c => c.hasBiJian && c.hasZhengYin && c.relations.includes("生我") && c.dayElement === "水" }, // 水日比生壬癸為印
+{ name: "食神藏干格", chance: 23, condition: c => c.hasShiShen && setup.destinySystem.zhiCangGan[c.monthGZ.zhi]?.some(g => setup.destinySystem.getTenGod(c.dayGZ.gan, g) === "食神") }, // 月令藏干成食神
+{ name: "財星雙重格", chance: 27, condition: c => c.hasZhengCai && c.tenGodsInMonthZhi.filter(t => t.tenGod === "偏財").length > 1 }, // 偏財重重
+{ name: "官星複合格", chance: 27, condition: c => c.hasZhengGuan && c.hasQiSha }, // 官殺混見
+{ name: "傷官透出格", chance: 26, condition: c => c.hasShangGuan && c.relations.includes("我剋") && ["丙", "丁"].includes(c.dayGZ.gan) }, // 火日見辛為傷官
+{ name: "食神偏財格", chance: 26, condition: c => c.hasShiShen && c.tenGodsInMonthZhi.some(t => t.tenGod === "偏財") && c.relations.includes("我生") }, // 食神生偏財
+{ name: "正財偏印格", chance: 27, condition: c => c.hasZhengCai && c.hasPianYin && c.relations.includes("生我") && c.dayElement === "木" }, // 木日見戊庚為財，癸為偏印
+{ name: "食印比格", chance: 25, condition: c => c.hasShiShen && c.hasZhengYin && c.hasBiJian }, // 食神、印、比同現
+{ name: "七殺制財格", chance: 26, condition: c => c.hasQiSha && c.hasZhengCai && c.relations.includes("我剋") && ["乙", "丁"].includes(c.dayGZ.gan) }, // 火日七殺制財
+{ name: "官殺爭權格", chance: 25, condition: c => c.hasZhengGuan && c.hasQiSha && c.relations.includes("同氣") }, // 官殺同氣爭權
+{ name: "偏財制官格", chance: 26, condition: c => c.tenGodsInMonthZhi.some(t => t.tenGod === "偏財") && c.hasZhengGuan && c.relations.includes("我剋") }, // 財官相剋格
+{ name: "劫財傷官格", chance: 24, condition: c => c.hasJieCai && c.hasShangGuan && c.relations.includes("同氣") }, // 劫財與傷官共現
+{ name: "正印透出格", chance: 25, condition: c => c.hasZhengYin && c.relations.includes("生我") }, // 正印透出生身
+{ name: "偏印制殺格", chance: 25, condition: c => c.hasPianYin && c.hasQiSha && c.relations.includes("生我") }, // 偏印制七殺
+{ name: "財官相生格", chance: 27, condition: c => c.hasZhengCai && c.hasZhengGuan && c.relations.includes("生我") }, // 財官印順生
+{ name: "七殺偏印格", chance: 26, condition: c => c.hasQiSha && c.hasPianYin && c.relations.includes("生我") }, // 七殺見印制而生身
+{ name: "雙印格", chance: 24, condition: c => c.hasZhengYin && c.hasPianYin && c.relations.includes("我生") }, // 正偏印並存
+{ name: "食神傷官格", chance: 25, condition: c => c.hasShiShen && c.hasShangGuan && c.relations.includes("同氣") }, // 食傷並透
+{ name: "偏財比肩格", chance: 25, condition: c => c.tenGodsInMonthZhi.some(t => t.tenGod === "偏財") && c.hasBiJian && c.relations.includes("同氣") }, // 偏財與比肩共氣
+{ name: "官星存財格", chance: 26, condition: c => c.hasZhengGuan && c.hasZhengCai && c.relations.includes("同氣") }, // 官財同氣
+{ name: "正劫平衡格", chance: 24, condition: c => c.hasJieCai && c.hasBiJian && !c.relations.includes("我剋") && c.relations.includes("同氣") }, // 劫財與比肩均衡
 
 // ==== 常見命格（優化＋補充） ====
-{ name: "印星高照", chance: 40, condition: c => c.relations.includes("生我") },   // 印星旺，助身強
-{ name: "身強有根", chance: 35, condition: c => c.relations.includes("我生") },   // 日主生旺，根基穩固
-{ name: "身弱多煞", chance: 30, condition: c => c.relations.includes("剋我") },   // 身弱遭剋，多災多難
-{ name: "食神生財", chance: 33, condition: c => c.dayElement === "土" },           // 土日主食神生財
-{ name: "偏印扶身", chance: 32, condition: c => c.monthElement === "水" },         // 水旺，偏印助身
-{ name: "偏印漂浮", chance: 30, condition: c => c.timeElement === "水" },          // 偏印無根，漂浮不定
-{ name: "官殺混雜", chance: 28, condition: c => c.relations.includes("剋我") && c.relations.includes("我剋") }, // 官殺相克
-{ name: "傷官見官", chance: 27, condition: c => c.dayElement === "金" },           // 金日主傷官見官
-{ name: "財星透出", chance: 28, condition: c => c.dayElement === "木" },           // 木日主財星明顯
-{ name: "偏財透出", chance: 28, condition: c => c.dayElement === "火" },           // 火日主偏財顯露
-{ name: "正官明顯", chance: 28, condition: c => c.timeElement === "土" },           // 時柱土旺正官強
-{ name: "殺印相生", chance: 28, condition: c => c.relations.includes("剋我") && c.relations.includes("生我") },  // 殺印相生互補
-{ name: "食神制殺", chance: 26, condition: c => c.relations.includes("我生") && c.relations.includes("剋我") },  // 食神抑殺
-{ name: "七殺伏藏", chance: 24, condition: c => c.dayElement === "木" },           // 木日主七殺藏於支
-{ name: "火旺生財", chance: 30, condition: c => c.dayElement === "火" && c.relations.includes("生我") },          // 火旺財生
-{ name: "印旺身弱", chance: 28, condition: c => c.hasZhengYin && c.relations.includes("剋我") },                   // 印旺身弱
-{ name: "財印雙全", chance: 29, condition: c => c.hasZhengCai && c.hasZhengYin },  // 財印相生
-{ name: "文武雙全", chance: 27, condition: c => c.hasZhengGuan && c.hasShiShen },  // 官星食神皆旺
-{ name: "財官兩旺", chance: 28, condition: c => c.hasZhengCai && c.hasZhengGuan }, // 財官兩旺
-{ name: "劫財透出", chance: 25, condition: c => c.hasJieCai && c.relations.includes("生我") },                      // 劫財外透
-{ name: "比肩爭鋒", chance: 24, condition: c => c.hasBiJian && c.relations.includes("我剋") },                      // 比肩爭鋒
-{ name: "桃花盛旺", chance: 26, condition: c => ["申","子","辰","卯","酉"].includes(c.monthGZ.zhi) },              // 桃花旺
-{ name: "官星得祿", chance: 30, condition: c => c.hasZhengGuan && !c.relations.includes("剋我") },                 // 官星得祿
-{ name: "印比雙全", chance: 29, condition: c => c.hasZhengYin && c.hasBiJian },                                     // 印比兩旺
-{ name: "食傷生財", chance: 28, condition: c => c.hasShiShen && c.hasZhengCai },                                    // 食傷生財
-{ name: "七殺化權", chance: 27, condition: c => c.hasQiSha && c.relations.includes("我生") },                       // 七殺化權
-{ name: "財官印合", chance: 26, condition: c => c.hasZhengCai && c.hasZhengGuan && c.hasZhengYin },                 // 財官印合
-{ name: "比肩身旺", chance: 26, condition: c => c.hasBiJian && !c.relations.includes("剋我") },                      // 比肩身旺
-{ name: "偏印得助", chance: 25, condition: c => c.hasPianYin && c.relations.includes("生我") },                      // 偏印得助
-{ name: "傷官犯官", chance: 25, condition: c => c.hasShangGuan && c.hasZhengGuan },                                 // 傷官犯官
-{ name: "財破財來", chance: 24, condition: c => c.hasJieCai && c.relations.includes("剋我") },                       // 財破財來
-{ name: "財星外透", chance: 24, condition: c => c.hasZhengCai && c.relations.includes("我剋") },                     // 財星外透
-{ name: "食印雙扶", chance: 23, condition: c => c.hasShiShen && c.hasZhengYin },                                    // 食印雙扶
-{ name: "孤辰寡宿", chance: 26, condition: c => ["寅", "巳", "申", "亥"].includes(c.timeZhi) && c.relations.includes("剋我") },  // 孤辰寡宿
-{ name: "財旺氣盛", chance: 28, condition: c => c.hasZhengCai && c.relations.includes("我生") },                    // 財旺氣盛
-{ name: "貴氣盈門", chance: 27, condition: c => c.hasZhengYin && c.relations.includes("生我") },                    // 貴氣盈門
-{ name: "祿馬奔馳", chance: 28, condition: c => ["午", "亥"].includes(c.monthGZ.zhi) && c.relations.includes("我生") }, // 祿馬奔馳
-{ name: "印重官微", chance: 27, condition: c => c.hasZhengYin && !c.hasZhengGuan },                                 // 印重官微
-{ name: "支藏本元", chance: 27, condition: c => c.timeElement === c.dayElement },                                   // 支藏本元
-{ name: "月令得勢", chance: 29, condition: c => c.monthElement === c.dayElement },                                  // 月令得勢
-{ name: "火土比鄰", chance: 30, condition: c => c.monthElement === "火" && c.timeElement === "土" },                  // 火土比鄰
-{ name: "福德潛藏", chance: 29, condition: c => c.hasZhengYin && c.relations.includes("生我") && c.timeElement === "水" },  // 福德潛藏
-{ name: "木火相生", chance: 30, condition: c => ["木","火"].includes(c.monthElement) && ["木","火"].includes(c.timeElement) }, // 木火相生
-{ name: "水木相生", chance: 30, condition: c => ["水","木"].includes(c.monthElement) && ["水","木"].includes(c.timeElement) }, // 水木相生
-{ name: "天醫拱命", chance: 28, condition: c => c.dayElement === "土" && c.hasZhengYin },                             // 天醫拱命
-{ name: "小人暗害", chance: 26, condition: c => c.hasJieCai && c.relations.includes("剋我") && c.relations.includes("我剋") },  // 小人暗害
+{ name: "印星高照", chance: 40, condition: c => c.hasZhengYin && c.relations.includes("生我") && setup.destinySystem.zhiCangGan[c.monthGZ.zhi]?.some(g => ["壬", "癸"].includes(g)) && setup.destinySystem.getGanYinYang(c.dayGZ.gan) !== setup.destinySystem.getGanYinYang(c.monthGZ.gan) }, // 【出處】《滴天髓》印星得氣，陰陽互補；藏干得印尤佳
+{ name: "身強有根", chance: 35, condition: c => (c.hasBiJian || c.hasShiShen) && setup.destinySystem.zhiCangGan[c.timeZhi]?.includes(c.dayGZ.gan) && setup.destinySystem.getRelation(c.dayElement, c.timeElement) === "同氣" && setup.destinySystem.getGanYinYang(c.dayGZ.gan) === setup.destinySystem.getGanYinYang(c.timeGan) }, // 【出處】《三命通會》得根者身旺，藏干有比劫為助
+{ name: "身弱多煞", chance: 30, condition: c => !c.hasBiJian && !c.hasZhengYin && (c.hasQiSha || c.hasZhengGuan) && c.relations.filter(r => r === "剋我").length >= 2 && c.isBodyWeak }, // 【出處】《子平真詮》官煞旺而身弱無依，難承其勢
+{ name: "食神生財", chance: 33, condition: c => c.hasShiShen && c.hasZhengCai && c.relations.includes("我生") && c.relations.includes("我剋") && setup.destinySystem.getRelation(c.dayElement, c.timeElement) === "我生" && !c.hasQiSha }, // 【出處】《三命通會》食神生財，主福祿，忌逢煞破
+{ name: "偏印扶身", chance: 32, condition: c => c.hasPianYin && !c.hasZhengYin && setup.destinySystem.zhiCangGan[c.monthGZ.zhi]?.some(g => setup.destinySystem.getTenGod(c.dayGZ.gan, g) === "偏印") && setup.destinySystem.getRelation(c.monthElement, c.dayElement) === "生我" && setup.destinySystem.getGanYinYang(c.dayGZ.gan) !== setup.destinySystem.getGanYinYang(c.monthGZ.gan) }, // 【出處】《神峰通考》偏印扶身，不見正印者亦吉，身弱得助為上
+{ name: "偏印漂浮", chance: 30, condition: c => c.hasPianYin && !c.hasZhengYin && !setup.destinySystem.zhiCangGan[c.timeZhi]?.some(g => setup.destinySystem.getTenGod(c.dayGZ.gan, g) === "比肩") && c.relations.includes("生我") && c.isBodyWeak }, // 【出處】《滴天髓》偏印無根、虛浮，難成器
+{ name: "官殺混雜", chance: 28, condition: c => c.hasQiSha && c.hasZhengGuan && setup.destinySystem.getGanYinYang(c.dayGZ.gan) !== setup.destinySystem.getGanYinYang(c.monthGZ.gan) && c.relations.includes("剋我") && !c.hasZhengYin }, // 【出處】《子平真詮》官殺混雜，主名利不清，身弱者尤忌
+{ name: "傷官見官", chance: 27, condition: c => c.hasShangGuan && c.hasZhengGuan && !c.hasQiSha && setup.destinySystem.getRelation(c.dayElement, c.monthElement) === "我生" && c.relations.includes("剋我") }, // 【出處】《三命通會》傷官見官為忌，除非印綬通關
+{ name: "財星透出", chance: 28, condition: c => c.hasZhengCai && setup.destinySystem.getRelation(c.dayElement, c.timeElement) === "我剋" && !c.hasBiJian && setup.destinySystem.getGanYinYang(c.dayGZ.gan) !== setup.destinySystem.getGanYinYang(c.timeGan) && !c.hasJieCai }, // 【出處】《命理約言》財星明透而日主無制者，主奔波求財
+{ name: "偏財透出", chance: 28, condition: c => c.hasPianCai && c.tenGodsInMonthZhi?.some(t => t.tenGod === "偏財") && setup.destinySystem.getRelation(c.dayElement, c.monthElement) === "我剋" }, // 【出處】《三命通會》偏財外露，財星易得亦易失，主變動中見得失
+{ name: "正官明顯", chance: 28, condition: c => c.hasZhengGuan && !c.hasQiSha && setup.destinySystem.zhiCangGan[c.timeZhi]?.includes("正官") && setup.destinySystem.getRelation(c.dayElement, c.timeElement) === "剋我" }, // 【出處】《滴天髓》正官當權為貴，時干坐祿更佳
+{ name: "殺印相生", chance: 28, condition: c => c.hasQiSha && c.hasZhengYin && c.relations.includes("剋我") && c.relations.includes("生我") }, // 【出處】《三命通會》殺印相生，主權勢且有智慧之格，忌雜氣
+{ name: "食神制殺", chance: 26, condition: c => c.hasShiShen && c.hasQiSha && !c.hasShangGuan && setup.destinySystem.getRelation(c.dayElement, c.monthElement) === "我生" }, // 【出處】《三命通會》食神制殺為吉格，食神當權者尤貴
+{ name: "七殺伏藏", chance: 24, condition: c => c.hasQiSha && setup.destinySystem.zhiCangGan[c.monthGZ.zhi]?.some(g => setup.destinySystem.getTenGod(c.dayGZ.gan, g) === "七殺") && !c.hasZhengGuan }, // 【出處】《子平真詮》七殺藏於支中，為伏殺，宜印綬化之
+{ name: "火旺生財", chance: 30, condition: c => c.dayElement === "火" && c.hasZhengCai && setup.destinySystem.getRelation("火", c.timeElement) === "我剋" && c.relations.includes("我剋") && setup.destinySystem.getGanYinYang(c.dayGZ.gan) === "陽" }, // 【出處】《三命通會》火日主得時旺，剋金為財，財旺者富
+{ name: "印旺身弱", chance: 28, condition: c => c.hasZhengYin && c.relations.includes("剋我") && !c.hasBiJian && c.isBodyWeak && setup.destinySystem.zhiCangGan[c.monthGZ.zhi]?.some(g => setup.destinySystem.getTenGod(c.dayGZ.gan, g) === "正印") }, // 【出處】《滴天髓》印星旺而身弱，宜破印扶身
+{ name: "財印雙全", chance: 29, condition: c => c.hasZhengCai && c.hasZhengYin && c.relations.includes("我剋") && c.relations.includes("生我") && setup.destinySystem.zhiCangGan[c.timeZhi]?.some(g => setup.destinySystem.getTenGod(c.dayGZ.gan, g) === "正財") && setup.destinySystem.zhiCangGan[c.monthGZ.zhi]?.some(g => setup.destinySystem.getTenGod(c.dayGZ.gan, g) === "正印") }, // 【出處】《滴天髓》財印雙全，財旺印扶為上格
+{ name: "文武雙全", chance: 27, condition: c => c.hasZhengGuan && c.hasShiShen && c.relations.includes("我生") && c.relations.includes("剋我") && setup.destinySystem.getGanYinYang(c.dayGZ.gan) !== setup.destinySystem.getGanYinYang(c.monthGZ.gan) }, // 【出處】《子平真詮》食神輔官，文武兼資
+{ name: "財官兩旺", chance: 28, condition: c => c.hasZhengCai && c.hasZhengGuan && c.relations.includes("我剋") && !c.hasJieCai && setup.destinySystem.getRelation(c.dayElement, c.timeElement) === "我剋" }, // 【出處】《三命通會》財官兩旺，主富貴雙全
+{ name: "劫財透出", chance: 25, condition: c => c.hasJieCai && c.relations.includes("同氣") && !c.hasZhengYin && setup.destinySystem.zhiCangGan[c.monthGZ.zhi]?.some(g => setup.destinySystem.getTenGod(c.dayGZ.gan, g) === "劫財") }, // 【出處】《滴天髓》劫財外透，爭財無制
+{ name: "比肩爭鋒", chance: 24, condition: c => c.hasBiJian && c.relations.includes("我剋") && c.hasZhengCai && setup.destinySystem.getRelation(c.dayElement, c.timeElement) === "我剋" }, // 【出處】《三命通會》比肩奪財，爭鋒失和
+{ name: "桃花盛旺", chance: 26, condition: c => ["申","子","辰","卯","酉"].includes(c.monthGZ.zhi) && ["子","午","卯","酉"].includes(c.dayGZ.zhi) && c.relations.includes("我生") && setup.destinySystem.getGanYinYang(c.dayGZ.gan) !== setup.destinySystem.getGanYinYang(c.timeGan) }, // 【出處】《三命通會》桃花臨命旺地，情事多端
+{ name: "官星得祿", chance: 30, condition: c => c.hasZhengGuan && !c.relations.includes("剋我") && c.relations.includes("生我") && setup.destinySystem.getGanYinYang(c.dayGZ.gan) !== setup.destinySystem.getGanYinYang(c.monthGZ.gan) }, // 【出處】《滴天髓》官星得印，祿位可期
+{ name: "印比雙全", chance: 29, condition: c => c.hasZhengYin && c.hasBiJian && c.relations.includes("生我") && c.relations.includes("同氣") && setup.destinySystem.zhiCangGan[c.monthGZ.zhi]?.some(g => setup.destinySystem.getTenGod(c.dayGZ.gan, g) === "正印" || setup.destinySystem.getTenGod(c.dayGZ.gan, g) === "比肩") }, // 【出處】《命理正宗》印比同扶，身旺堪任財官
+   
+{ name: "食傷生財", chance: 28, condition: c => c.hasShiShen && c.hasZhengCai && c.relations.includes("我生") && c.relations.includes("我剋") && setup.destinySystem.getRelation(c.dayElement, c.timeElement) === "我生" }, // 【出處】《三命通會》食傷生財，主富足，忌煞制破
+{ name: "七殺化權", chance: 27, condition: c => c.hasQiSha && c.relations.includes("我生") && !c.hasShangGuan && c.hasZhengYin && setup.destinySystem.getGanYinYang(c.dayGZ.gan) !== setup.destinySystem.getGanYinYang(c.monthGZ.gan) }, // 【出處】《滴天髓》七殺得印化權，剛柔相濟為貴格
+{ name: "財官印合", chance: 26, condition: c => c.hasZhengCai && c.hasZhengGuan && c.hasZhengYin && c.relations.includes("我剋") && c.relations.includes("生我") && setup.destinySystem.getRelation(c.monthElement, c.dayElement) === "生我" }, // 【出處】《三命通會》財官印三全成格，富貴具足
+{ name: "比肩身旺", chance: 26, condition: c => c.hasBiJian && !c.relations.includes("剋我") && c.relations.includes("同氣") && setup.destinySystem.getGanYinYang(c.dayGZ.gan) === setup.destinySystem.getGanYinYang(c.timeGan) }, // 【出處】《命理正宗》比肩助身，主身旺可任財官
+{ name: "偏印得助", chance: 25, condition: c => c.hasPianYin && c.relations.includes("生我") && setup.destinySystem.getGanYinYang(c.dayGZ.gan) !== setup.destinySystem.getGanYinYang(c.monthGZ.gan) && setup.destinySystem.zhiCangGan[c.monthGZ.zhi]?.some(g => setup.destinySystem.getTenGod(c.dayGZ.gan, g) === "偏印") }, // 【出處】《神峰通考》偏印得氣助身，不見正印亦吉
+{ name: "傷官犯官", chance: 25, condition: c => c.hasShangGuan && c.hasZhengGuan && !c.hasQiSha && setup.destinySystem.getRelation(c.dayElement, c.monthElement) === "我生" }, // 【出處】《三命通會》傷官見官，主損名破勢，需印化解
+{ name: "財破財來", chance: 24, condition: c => c.hasJieCai && c.relations.includes("剋我") && c.hasZhengCai && setup.destinySystem.getRelation(c.dayElement, c.timeElement) === "我剋" }, // 【出處】《滴天髓》財星遭劫，得中和亦能生財
+{ name: "財星外透", chance: 24, condition: c => c.hasZhengCai && c.relations.includes("我剋") && !c.hasBiJian && !c.hasJieCai && setup.destinySystem.getGanYinYang(c.dayGZ.gan) !== setup.destinySystem.getGanYinYang(c.timeGan) }, // 【出處】《命理約言》財星外透，主求財離鄉
+{ name: "食印雙扶", chance: 23, condition: c => c.hasShiShen && c.hasZhengYin && c.relations.includes("生我") && setup.destinySystem.getRelation(c.monthElement, c.dayElement) === "生我" }, // 【出處】《滴天髓》食神印綬同生身，主學術福壽
+{ name: "財旺氣盛", chance: 28, condition: c => c.hasZhengCai && c.relations.includes("我生") && c.relations.includes("我剋") && setup.destinySystem.getRelation(c.dayElement, c.timeElement) === "我剋" }, // 【出處】《三命通會》財旺生官，氣足則富
+{ name: "貴氣盈門", chance: 27, condition: c => c.hasZhengYin && c.relations.includes("生我") && c.timeElement === "金" && setup.destinySystem.getRelation("金", c.dayElement) === "生我" }, // 【出處】《滴天髓》印綬得地生身，金主貴氣
+{ name: "祿馬奔馳", chance: 28, condition: c => ["午", "亥"].includes(c.monthGZ.zhi) && c.relations.includes("我生") && c.dayElement !== "土" && setup.destinySystem.getRelation(c.monthElement, c.dayElement) === "我生" }, // 【出處】《三命通會》祿馬得地，奔走異方發財
+{ name: "印重官微", chance: 27, condition: c => c.hasZhengYin && !c.hasZhengGuan && c.relations.includes("生我") && !c.relations.includes("我剋") && setup.destinySystem.getRelation(c.monthElement, c.dayElement) === "生我" }, // 【出處】《滴天髓》印多官輕，文有餘力，權不在身
+{ name: "支藏本元", chance: 27, condition: c => c.timeElement === c.dayElement && setup.destinySystem.zhiCangGan[c.timeZhi]?.includes(c.dayGZ.gan) }, // 【出處】《神峰通考》支藏本元，根深者身旺
+{ name: "月令得勢", chance: 29, condition: c => c.monthElement === c.dayElement && c.relations.includes("同氣") && setup.destinySystem.zhiCangGan[c.monthGZ.zhi]?.includes(c.dayGZ.gan) }, // 【出處】《三命通會》月令同氣，得令有勢
+{ name: "火土比鄰", chance: 30, condition: c => c.monthElement === "火" && c.timeElement === "土" && setup.destinySystem.getRelation("火", "土") === "我生" }, // 【出處】《滴天髓》火土相生，比鄰為福
+{ name: "福德潛藏", chance: 29, condition: c => c.hasZhengYin && c.relations.includes("生我") && c.timeElement === "水" && setup.destinySystem.getRelation("水", c.dayElement) === "生我" }, // 【出處】《滴天髓》印綬潛藏，福德暗藏
+{ name: "木火相生", chance: 30, condition: c => ["木", "火"].includes(c.monthElement) && ["木", "火"].includes(c.timeElement) && setup.destinySystem.getRelation(c.monthElement, c.timeElement) === "我生" }, // 【出處】《三命通會》木火相生，文昌清透
+{ name: "水木相生", chance: 30, condition: c => ["水", "木"].includes(c.monthElement) && ["水", "木"].includes(c.timeElement) && setup.destinySystem.getRelation(c.monthElement, c.timeElement) === "我生" }, // 【出處】《三命通會》水木相生，仁慈有文
+{ name: "天醫拱命", chance: 28, condition: c => c.dayElement === "土" && c.hasZhengYin && c.relations.includes("生我") && c.timeElement === "水" && setup.destinySystem.getRelation("水", "土") === "生我" }, // 【出處】《命理約言》水印拱土，主醫藥、養生、福壽之命
+{ name: "小人暗害", chance: 26, condition: c => c.hasJieCai && c.relations.includes("剋我") && c.relations.includes("我剋") && !c.hasBiJian && setup.destinySystem.getRelation(c.timeElement, c.dayElement) === "剋我" }, // 【出處】《滴天髓》劫財明暗，主小人破局
+
+{ name: "傷官配印", chance: 30, condition: c => c.hasShangGuan && c.hasZhengYin && !c.hasZhengGuan && c.relations.includes("我生") && c.relations.includes("生我") && setup.destinySystem.getRelation(c.dayElement, c.timeElement) === "我生" && setup.destinySystem.getRelation(c.monthElement, c.dayElement) === "生我" }, // 【出處】《滴天髓》傷官配印，主文章顯達，功名富貴
+{ name: "羊刃逢印", chance: 28, condition: c => c.hasJieCai && c.hasZhengYin && c.relations.includes("生我") && c.relations.includes("同氣") && setup.destinySystem.getRelation(c.timeElement, c.dayElement) === "同氣" }, // 【出處】《三命通會》羊刃遇印綬，剛中帶柔，貴中帶險
+{ name: "棄命從財", chance: 32, condition: c => c.hasZhengCai && c.hasQiSha && !c.hasBiJian && !c.hasZhengYin && c.relations.every(r => r === "我剋") && setup.destinySystem.getRelation(c.monthElement, c.dayElement) === "我剋" }, // 【出處】《子平真詮》從財格，日主極弱，財多官助，反為上格
+{ name: "從兒格", chance: 31, condition: c => c.hasShiShen && c.hasShangGuan && !c.hasBiJian && !c.hasZhengYin && c.relations.every(r => r === "我生") }, // 【出處】《三命通會》從兒格，食傷皆透，日主極弱而泄盡
+{ name: "從殺格", chance: 32, condition: c => c.hasQiSha && !c.hasBiJian && !c.hasZhengYin && !c.hasZhengGuan && c.relations.every(r => r === "剋我") }, // 【出處】《滴天髓》從殺格，專用七殺，去印比為佳
+{ name: "官印相生", chance: 30, condition: c => c.hasZhengGuan && c.hasZhengYin && c.relations.includes("剋我") && c.relations.includes("生我") && setup.destinySystem.getRelation(c.monthElement, c.dayElement) === "生我" && setup.destinySystem.getRelation(c.dayElement, c.timeElement) === "我剋" }, // 【出處】《命理約言》官印相生，貴命之源，文昌富貴
+{ name: "財殺兩旺", chance: 31, condition: c => c.hasZhengCai && c.hasQiSha && c.relations.includes("我剋") && c.relations.includes("剋我") && c.isBodyStrong }, // 【出處】《滴天髓》財殺兩旺，身強能任，為武職之貴命
+{ name: "倒食傷身", chance: 27, condition: c => c.hasShangGuan && !c.hasZhengCai && c.relations.includes("我生") && c.relations.includes("剋我") && c.isBodyWeak }, // 【出處】《三命通會》食傷太過反傷身，命主多病不安
+{ name: "官星制殺", chance: 30, condition: c => c.hasQiSha && c.hasZhengGuan && c.relations.includes("剋我") && setup.destinySystem.getGanYinYang(c.dayGZ.gan) !== setup.destinySystem.getGanYinYang(c.monthGZ.gan) && setup.destinySystem.getRelation(c.monthElement, c.dayElement) === "剋我" }, // 【出處】《命理正宗》官能制殺，名利兼得，身強為上
+{ name: "日坐貴人", chance: 29, condition: c => ["子", "午", "卯", "酉"].includes(c.dayGZ.zhi) && setup.destinySystem.getRelation(c.dayElement, c.dayGZ.zhi) === "貴人" }, // 【出處】《三命通會》日支為貴，逢生旺地，主人端莊尊貴
+
 
 // 新增補充（傳統經典）
-// 「傷官見官」之變體 - 傷官剋官之凶格
-{ name: "傷官剋官", chance: 22, condition: c => c.hasShangGuan && c.relations.includes("剋我") && c.hasZhengGuan }, 
+// 「傷官剋官」之變體 - 傷官剋官之凶格
+{ name: "傷官剋官", chance: 22, condition: c => c.hasShangGuan && c.relations.includes("剋我") && c.hasZhengGuan && !c.hasZhengYin }, 
 // 「七殺透出」 - 七殺外露，主權威
-{ name: "七殺透出", chance: 24, condition: c => c.hasQiSha && c.relations.includes("我剋") }, 
+{ name: "七殺透出", chance: 24, condition: c => c.hasQiSha && c.relations.includes("我剋") && !c.hasZhengYin }, 
 // 「正印旺身」 - 正印幫助身強
-{ name: "正印旺身", chance: 28, condition: c => c.hasZhengYin && c.relations.includes("我生") }, 
+{ name: "正印旺身", chance: 28, condition: c => c.hasZhengYin && c.relations.includes("我生") && !c.hasQiSha }, 
 // 「財星助身」 - 財星生助日主
-{ name: "財星助身", chance: 27, condition: c => c.hasZhengCai && c.relations.includes("我生") }, 
+{ name: "財星助身", chance: 27, condition: c => c.hasZhengCai && c.relations.includes("我生") && !c.hasQiSha }, 
+// 「傷官太過命」- 傷官過旺，無正印正官制約
 { name: "傷官太過命", chance: 28, condition: c => c.hasShangGuan && !c.hasZhengYin && !c.hasZhengGuan }, // 出處：《滴天髓》
+// 「七殺奪官命」- 七殺旺且正官出現，互爭權威
 { name: "七殺奪官命", chance: 27, condition: c => c.hasQiSha && c.hasZhengGuan }, // 出處：《三命通會》
+// 「財多壓身命」 - 財星過多剋日主，無比肩幫身
 { name: "財多壓身命", chance: 25, condition: c => c.hasZhengCai && c.relations.includes("剋我") && !c.hasBiJian }, // 出處：《子平真詮》
+// 「比肩爭財命」 - 比肩與財星爭旺
 { name: "比肩爭財命", chance: 26, condition: c => c.hasBiJian && c.hasZhengCai }, // 出處：《窮通寶鑑》
+// 「重印壓身命」 - 印星旺盛，財官不顯
 { name: "重印壓身命", chance: 25, condition: c => c.hasZhengYin && !c.hasZhengCai && !c.hasZhengGuan }, // 出處：《滴天髓》
+// 「七殺無制命」 - 七殺旺無傷官制約與正印生扶
 { name: "七殺無制命", chance: 29, condition: c => c.hasQiSha && !c.hasShangGuan && !c.hasZhengYin }, // 出處：《神峰通考》
+// 「身弱見財命」 - 身弱遇財星剋身，無比肩解圍
 { name: "身弱見財命", chance: 24, condition: c => c.hasZhengCai && !c.relations.includes("我生") && !c.hasBiJian }, // 出處：《命理正宗》
+// 「印綬奪食命」 - 印星與食神同現，財星缺乏
 { name: "印綬奪食命", chance: 26, condition: c => c.hasZhengYin && c.hasShiShen && !c.hasZhengCai }, // 出處：《三命通會》
+// 「殺印交戰命」 - 七殺與正印並存，無食神調和
 { name: "殺印交戰命", chance: 27, condition: c => c.hasQiSha && c.hasZhengYin && !c.hasShiShen }, // 出處：《滴天髓闡微》
+// 「傷官敗印命」 - 傷官剋制正印，印星受傷
 { name: "傷官敗印命", chance: 28, condition: c => c.hasShangGuan && c.hasZhengYin && c.relations.includes("我剋") }, // 出處：《命理精微》
+// 「傷官見官格」 - 傷官與正官同現，無七殺為佳格
+{ name: "傷官見官格", chance: 18, condition: c => c.hasShangGuan && c.hasZhengGuan && !c.hasQiSha }, // 出處：《三命通會》
+// 「食神制殺格」 - 食神制七殺，為福格
+{ name: "食神制殺格", chance: 20, condition: c => c.hasShiShen && c.hasQiSha && !c.hasZhengYin }, // 出處：《三命通會》
+//「偏印浮沉格」 - 偏印旺而無正印，浮沉不定
+{ name: "偏印浮沉格", chance: 15, condition: c => c.hasPianYin && !c.hasZhengYin && !c.hasZhengCai }, // 出處：《三命通會》
+//「財官無印格」 - 財官雙透無印生扶，身弱難任
+{ name: "財官無印格", chance: 24, condition: c => c.hasZhengCai && c.hasZhengGuan && !c.hasZhengYin }, // 出處：《滴天髓》
+//「印比重重格」 - 正印與比肩並旺，財難入命
+{ name: "印比重重格", chance: 25, condition: c => c.hasZhengYin && c.hasBiJian && !c.hasZhengCai && !c.hasZhengGuan }, // 出處：《命理正宗》
+// 「七殺傷官同現格」 - 七殺與傷官並現，剋伐過重
+{ name: "七殺傷官同現格", chance: 23, condition: c => c.hasQiSha && c.hasShangGuan && !c.hasZhengYin }, // 出處：《三命通會》
+//「傷官佩印格」 - 傷官與正印同現，得印化剋
+{ name: "傷官佩印格", chance: 28, condition: c => c.hasShangGuan && c.hasZhengYin && !c.hasZhengCai && !c.hasQiSha }, // 出處：《命理正宗》
+//「財星壓身格」 - 財星旺剋身，無比肩印助
+{ name: "財星壓身格", chance: 26, condition: c => c.hasZhengCai && c.relations.includes("剋我") && !c.hasBiJian && !c.hasZhengYin }, // 出處：《子平真詮》
+//「七殺攻身格」 - 七殺剋日主，無制化
+{ name: "七殺攻身格", chance: 26, condition: c => c.hasQiSha && !c.hasShiShen && !c.hasZhengYin }, // 出處：《神峰通考》
+//「食神敗財格」 - 食神旺而財星不見，難發
+{ name: "食神敗財格", chance: 22, condition: c => c.hasShiShen && !c.hasZhengCai && !c.hasQiSha }, // 出處：《滴天髓闡微》
+   
 
+
+// ==== 空亡命格（依據傳統命理構成）====
+{ name: "殺星無制陷空命", chance: 26, condition: c => c.hasQiSha && !c.hasZhengGuan && (c.dayGZ.zhi === c.xunKong1 || c.dayGZ.zhi === c.xunKong2) && ["庚", "壬"].includes(c.dayGZ.gan) && c.relations.includes("剋我") && c.boneWeight <= 3.0 }, // 【出處】《滴天髓》殺星臨制空亡，命基輕虛難安
+{ name: "印星無根空命", chance: 25, condition: c => c.hasZhengYin && !c.hasPianYin && (c.monthGZ.zhi === c.xunKong1 || c.monthGZ.zhi === c.xunKong2) && ["陰"].includes(setup.destinySystem.ganYinYang[c.dayGZ.gan]) && c.boneWeight <= 3.0 }, // 【出處】《三命通會》陰干印孤，命勢漂零
+{ name: "傷官失勢命", chance: 25, condition: c => c.hasShangGuan && (c.timeZhi === c.xunKong1 || c.timeZhi === c.xunKong2) && c.relations.includes("我剋") && c.dayElement === "火" && c.boneWeight <= 3.0 }, // 【出處】《神峰通考》傷官無助火孤強，命身多虧
+{ name: "財星不聚命", chance: 27, condition: c => c.hasZhengCai && c.hasJieCai && (c.monthGZ.zhi === c.xunKong1 || c.monthGZ.zhi === c.xunKong2) && ["陽"].includes(setup.destinySystem.ganYinYang[c.dayGZ.gan]) && c.relations.includes("我剋") && c.boneWeight <= 3.0 }, // 【出處】《三命會通》財多聚空，浮名難守
+{ name: "官殺皆空命", chance: 24, condition: c => c.hasZhengGuan && c.hasQiSha && (c.monthGZ.zhi === c.xunKong1 || c.timeZhi === c.xunKong1 || c.monthGZ.zhi === c.xunKong2 || c.timeZhi === c.xunKong2) && ["甲", "乙"].includes(c.dayGZ.gan) && c.boneWeight <= 3.0 }, // 【出處】《子平粹言》官殺俱陷，命主不立
+{ name: "日坐空亡命", chance: 25, condition: c => (c.dayGZ.zhi === c.xunKong1 || c.dayGZ.zhi === c.xunKong2) && c.boneWeight <= 3.0 }, // 【出處】《三命通會》日元落空，根基動搖
+{ name: "月支落空命", chance: 24, condition: c => (c.monthGZ.zhi === c.xunKong1 || c.monthGZ.zhi === c.xunKong2) && c.boneWeight <= 3.0 }, // 【出處】《神峰通考》月支失位，命源薄弱
+{ name: "時支逢空命", chance: 24, condition: c => (c.timeZhi === c.xunKong1 || c.timeZhi === c.xunKong2) && c.boneWeight <= 3.0 }, // 【出處】《三命通會》末時無根，後運不續
+{ name: "日主陷空命", chance: 23, condition: c => (c.dayGZ.zhi === c.xunKong1 || c.dayGZ.zhi === c.xunKong2) && c.dayElement === c.monthElement && c.boneWeight <= 3.0 }, // 【出處】《滴天髓》比劫失位，命根失實
+{ name: "偏印落空命", chance: 24, condition: c => c.hasPianYin && (c.timeZhi === c.xunKong1 || c.timeZhi === c.xunKong2) && c.relations.includes("生我") && c.boneWeight <= 3.0 }, // 【出處】《子平粹言》偏印虛生，助力無實
+{ name: "食神空亡命", chance: 23, condition: c => c.hasShiShen && (c.monthGZ.zhi === c.xunKong1 || c.monthGZ.zhi === c.xunKong2) && c.dayElement === c.monthElement && c.boneWeight <= 3.0 }, // 【出處】《三命通會》食神逢空，福源斷絕
+{ name: "財透空亡命", chance: 23, condition: c => c.hasZhengCai && (c.timeZhi === c.xunKong1 || c.timeZhi === c.xunKong2) && !c.hasBiJian && c.boneWeight <= 3.0 }, // 【出處】《神峰通考》財無根氣虛，難聚易散
+{ name: "官星失位命", chance: 24, condition: c => c.hasZhengGuan && (c.dayGZ.zhi === c.xunKong1 || c.dayGZ.zhi === c.xunKong2) && c.relations.includes("剋我") && c.boneWeight <= 3.0 }, // 【出處】《三命通會》官失其職，身勢難伸
+{ name: "七殺孤命", chance: 25, condition: c => c.hasQiSha && (c.monthGZ.zhi === c.xunKong1 || c.monthGZ.zhi === c.xunKong2) && !c.hasZhengGuan && c.relations.includes("剋我") && c.boneWeight <= 3.0 }, // 【出處】《滴天髓》殺旺無官，剋氣不留
+{ name: "比肩落空命", chance: 23, condition: c => c.hasBiJian && (c.monthGZ.zhi === c.xunKong1 || c.monthGZ.zhi === c.xunKong2) && c.relations.includes("同氣") && c.boneWeight <= 3.0 }, // 【出處】《三命會通》比肩虛浮，助力無望
+{ name: "雙財皆空命", chance: 25, condition: c => c.hasZhengCai && Array.isArray(c.tenGodsInTimeZhi) && c.tenGodsInTimeZhi.some(t => t.tenGod === "偏財") && (c.timeZhi === c.xunKong1 || c.timeZhi === c.xunKong2) && c.boneWeight <= 3.0 }, // 【出處】《神峰通考》雙財落空，財運反覆
+{ name: "官殺雙空命", chance: 24, condition: c => c.hasZhengGuan && c.hasQiSha && c.timeZhi === c.xunKong1 && c.monthGZ.zhi === c.xunKong2 && c.boneWeight <= 3.0 }, // 【出處】《三命通會》官殺俱隱，命失其權
+{ name: "孤印無依命", chance: 23, condition: c => c.hasZhengYin && !c.hasPianYin && (c.dayGZ.zhi === c.xunKong1 || c.dayGZ.zhi === c.xunKong2) && c.boneWeight <= 3.0 }, // 【出處】《神峰通考》正印失根，生機不固
+
+{ name: "三刑逢空命", chance: 23, condition: c => Array.isArray(setup.destinySystem.zhiXingTriples) && setup.destinySystem.zhiXingTriples.some(group => group.includes(c.dayGZ.zhi) && (c.xunKong1 === c.dayGZ.zhi || c.xunKong2 === c.dayGZ.zhi)) && c.boneWeight <= 2.5 }, // 【出處】《三命通會》
+{ name: "六合失合命", chance: 24, condition: c => Array.isArray(setup.destinySystem.zhiHePairs) && setup.destinySystem.zhiHePairs.some(p => p.includes(c.timeZhi) && (c.xunKong1 === c.timeZhi || c.xunKong2 === c.timeZhi)) && c.boneWeight <= 2.5 }, // 【出處】《子平粹言》
+{ name: "年命空亡", chance: 24, condition: c => (c.yearZhi === c.xunKong1 || c.yearZhi === c.xunKong2) && c.boneWeight <= 2.6 }, // 【出處】《神峰通考》
+{ name: "三元皆空命", chance: 23, condition: c => [c.yearZhi, c.monthGZ.zhi, c.dayGZ.zhi].every(z => z === c.xunKong1 || z === c.xunKong2) && c.boneWeight <= 2.5 }, // 【出處】《三命通會》
+{ name: "食神化忌空", chance: 24, condition: c => c.hasShiShen && c.relations.includes("我生") && (c.timeZhi === c.xunKong1 || c.timeZhi === c.xunKong2) && c.boneWeight <= 2.5 }, // 【出處】《滴天髓》
+{ name: "財官無根空", chance: 24, condition: c => c.hasZhengCai && c.hasZhengGuan && !c.hasBiJian && (c.monthGZ.zhi === c.xunKong1 || c.monthGZ.zhi === c.xunKong2) && c.boneWeight <= 2.5 }, // 【出處】《三命通會》
+{ name: "陰日逢空命", chance: 23, condition: c => ["陰"].includes(setup.destinySystem.ganYinYang[c.dayGZ.gan]) && (c.dayGZ.zhi === c.xunKong1 || c.dayGZ.zhi === c.xunKong2) && c.boneWeight <= 2.4 }, // 【出處】《命理探源》
+{ name: "孤殺犯空命", chance: 24, condition: c => c.hasQiSha && !c.hasZhengGuan && !c.hasShiShen && c.timeZhi === c.xunKong1 && c.boneWeight <= 2.5 }, // 【出處】《神峰通考》
+{ name: "桃花落空命", chance: 24, condition: c => ["子", "午", "卯", "酉"].includes(c.dayGZ.zhi) && (c.dayGZ.zhi === c.xunKong1 || c.dayGZ.zhi === c.xunKong2) && c.boneWeight <= 2.4 }, // 【出處】《三命會海》
+{ name: "財星坐空命", chance: 24, condition: c => c.hasZhengCai && (c.dayGZ.zhi === c.xunKong1 || c.dayGZ.zhi === c.xunKong2) && c.boneWeight <= 2.5 }, // 【出處】《子平粹言》
+{ name: "孤煞入命", chance: 23, condition: c => c.hasQiSha && c.relations.includes("剋我") && (c.monthGZ.zhi === c.xunKong1 || c.monthGZ.zhi === c.xunKong2) && c.boneWeight <= 2.4 }, // 【出處】《神峰通考》
+{ name: "三奇落空命", chance: 22, condition: c => ["乙", "丙", "丁"].includes(c.dayGZ.gan) && c.monthGZ.gan === c.dayGZ.gan && (c.timeZhi === c.xunKong1 || c.timeZhi === c.xunKong2) && c.boneWeight <= 2.4 }, // 【出處】《三奇秘訣》
+{ name: "天元陷空命", chance: 23, condition: c => c.relations.includes("同氣") && (c.monthGZ.zhi === c.xunKong1 || c.monthGZ.zhi === c.xunKong2) && c.boneWeight <= 2.5 }, // 【出處】《滴天髓》
+{ name: "印比兩虛命", chance: 23, condition: c => c.hasZhengYin && c.hasBiJian && (c.monthGZ.zhi === c.xunKong1 || c.timeZhi === c.xunKong2) && c.boneWeight <= 2.5 }, // 【出處】《三命通會》
+{ name: "陽命陷空格", chance: 22, condition: c => setup.destinySystem.ganYinYang[c.dayGZ.gan] === "陽" && c.dayGZ.zhi === c.xunKong1 && c.boneWeight <= 2.5 }, // 【出處】《命理正宗》
+{ name: "陰木落空命", chance: 22, condition: c => c.dayGZ.gan === "乙" && (c.dayGZ.zhi === c.xunKong1 || c.dayGZ.zhi === c.xunKong2) && c.boneWeight <= 2.5 }, // 【出處】《子平粹言》
+{ name: "孤印陷空命", chance: 22, condition: c => c.hasZhengYin && !c.hasShiShen && (c.timeZhi === c.xunKong1 || c.timeZhi === c.xunKong2) && c.boneWeight <= 2.4 }, // 【出處】《神峰通考》
+{ name: "時上財星空", chance: 23, condition: c => c.tenGodsInTimeZhi?.some(t => t.tenGod === "偏財") && (c.timeZhi === c.xunKong1 || c.timeZhi === c.xunKong2) && c.boneWeight <= 2.5 }, // 【出處】《三命通會》
+{ name: "財生殺陷空", chance: 24, condition: c => c.hasZhengCai && c.hasQiSha && (c.monthGZ.zhi === c.xunKong1 || c.timeZhi === c.xunKong2) && c.boneWeight <= 2.5 }, // 【出處】《滴天髓》
+{ name: "食神財皆空", chance: 24, condition: c => c.hasShiShen && c.hasZhengCai && c.relations.includes("我生") && c.timeZhi === c.xunKong1 && c.boneWeight <= 2.5 }, // 【出處】《子平粹言》
+{ name: "身弱財多空", chance: 24, condition: c => c.dayStrength <= 2 && c.hasZhengCai && (c.dayGZ.zhi === c.xunKong1 || c.dayGZ.zhi === c.xunKong2) && c.boneWeight <= 2.4 }, // 【出處】《三命通會》
+{ name: "三柱全虛命", chance: 23, condition: c => [c.monthGZ.zhi, c.dayGZ.zhi, c.timeZhi].every(z => z === c.xunKong1 || z === c.xunKong2) && c.boneWeight <= 2.4 }, // 【出處】《神峰通考》
+{ name: "陰火坐空命", chance: 22, condition: c => c.dayGZ.gan === "丁" && c.dayGZ.zhi === c.xunKong1 && c.boneWeight <= 2.5 }, // 【出處】《滴天髓》
+{ name: "陰金陷空命", chance: 22, condition: c => c.dayGZ.gan === "辛" && (c.timeZhi === c.xunKong1 || c.timeZhi === c.xunKong2) && c.boneWeight <= 2.5 }, // 【出處】《三命會海》
+
+
+
+//===特殊死命==///
+{ name: "胎絕命", chance: 26, condition: c => ["甲", "乙"].includes(c.dayGZ.gan) && ["申", "酉", "戌"].includes(c.monthGZ.zhi) && ["申", "酉"].includes(c.xunKong1) && c.boneWeight <= 6.0 }, // 【出處】《淵海子平》胎元落空，主胎死或夭絕；※ 僅應於輕命格以下者（限三兩以下）
+{ name: "孤魂入命", chance: 25, condition: c => ["子", "亥"].includes(c.timeZhi) && c.hasPianYin && c.relations.includes("剋我") && c.boneWeight <= 3.0 }, // 【出處】《命理探源》孤陰不生，命主孤魂不附；※ 僅應於輕命格以下者（限三兩以下）
+{ name: "破氣無根命", chance: 24, condition: c => c.relations.every(r => r === "剋我") && !c.hasZhengYin && !c.hasPianYin && c.boneWeight <= 3.0 }, // 【出處】《滴天髓》四剋無印，氣脈皆絕；※ 僅應於輕命格以下者（限三兩以下）
+{ name: "印絕主夭命", chance: 25, condition: c => c.hasZhengYin && c.relations.filter(r => r === "剋我").length >= 2 && ["陰"].includes(setup.destinySystem.ganYinYang[c.dayGZ.gan]) && c.boneWeight <= 3.0 }, // 【出處】《神峰通考》陰日遇重剋，主印絕命危；※ 僅應於輕命格以下者（限三兩以下）
+{ name: "比劫奪印命", chance: 25, condition: c => c.hasBiJian && c.hasJieCai && c.hasZhengYin && c.relations.includes("剋我") && c.boneWeight <= 3.0 }, // 【出處】《三命通會》比劫奪印，命主虛絕不生；※ 僅應於輕命格以下者（限三兩以下）
+{ name: "財殺無制命", chance: 26, condition: c => c.hasZhengCai && c.hasQiSha && !c.hasZhengYin && c.relations.includes("剋我") && c.boneWeight <= 3.0 }, // 【出處】《子平粹言》財殺並現無制化，命途難全；※ 僅應於輕命格以下者（限三兩以下）
+{ name: "陽木無根命", chance: 25, condition: c => c.dayElement === "木" && setup.destinySystem.ganYinYang[c.dayGZ.gan] === "陽" && !c.hasZhengYin && !c.hasPianYin && c.boneWeight <= 3.0 }, // 【出處】《命理會真》陽木無根，氣斷命絕；※ 僅應於輕命格以下者（限三兩以下）
+{ name: "孤煞敗命", chance: 24, condition: c => ["庚", "辛"].includes(c.dayGZ.gan) && c.hasQiSha && !c.hasZhengYin && c.relations.includes("剋我") && c.boneWeight <= 3.0 }, // 【出處】《滴天髓》金日見煞無印，主孤煞敗命；※ 僅應於輕命格以下者（限三兩以下）
+{ name: "骨輕難壽命", chance: 25, condition: c => c.boneWeight < 2.0 && c.hasPianYin && !c.hasZhengYin }, // 【出處】《稱骨賦》骨輕無印，貧夭多厄；※ 僅限於骨輕至極者（不滿兩兩）
+{ name: "日陷孤墳命", chance: 24, condition: c => ["丑", "未", "戌"].includes(c.dayGZ.zhi) && c.dayGZ.zhi === c.xunKong1 && c.boneWeight <= 3.0 }, // 【出處】《三命通會》陷墓又空，命主孤絕；※ 僅應於輕命格以下者（限三兩以下）
+
+
+
+
+///====陰陽相關====///
+{ name: "陰陽錯亂命", chance: 15, condition: c => setup.destinySystem.ganYinYang[c.dayGZ.gan] !== setup.destinySystem.zhiYinYang[c.dayGZ.zhi] && ["辰", "戌", "丑", "未"].includes(c.dayGZ.zhi) && c.boneWeight <= 5.0 }, // 【出處】《三命會通》干支陰陽背違，性命不齊；※ 多見於三兩至五兩之命格
+{ name: "純陽剋主命", chance: 15, condition: c => setup.destinySystem.ganYinYang[c.dayGZ.gan] === "陽" && c.relations.includes("剋我") && !c.has印 && c.boneWeight <= 3.0 }, // 【出處】《滴天髓》陽干剋主無印，氣絕為凶；※ 僅限輕命主或骨格不固者方應此命
+{ name: "陰金失根命", chance: 14, condition: c => c.dayElement === "金" && setup.destinySystem.ganYinYang[c.dayGZ.gan] === "陰" && !c.hasBiJian && !c.has印 && c.boneWeight <= 3.0 }, // 【出處】《子平粹言》陰金無助，形銷氣盡；※ 僅限輕命主或骨格不固者方應此命
+{ name: "陽火無制命", chance: 15, condition: c => c.dayElement === "火" && setup.destinySystem.ganYinYang[c.dayGZ.gan] === "陽" && !c.hasZhengGuan && !c.has印 && c.boneWeight <= 5.0 }, // 【出處】《神峰通考》陽火過旺，無制則焚；※ 多見於三兩至五兩之命格
+{ name: "陰木敗根命", chance: 14, condition: c => c.dayElement === "木" && setup.destinySystem.ganYinYang[c.dayGZ.gan] === "陰" && c.relations.includes("剋我") && !c.hasZhengYin && c.boneWeight <= 3.0 }, // 【出處】《命理探源》陰木無根，命體多劫；※ 僅限輕命主或骨格不固者方應此命
+{ name: "陽剋陰虛命", chance: 15, condition: c => setup.destinySystem.ganYinYang[c.dayGZ.gan] === "陰" && c.relations.filter(r => r === "剋我").length >= 2 && !c.hasBiJian && c.boneWeight <= 3.0 }, // 【出處】《滴天髓》陰命重剋，主虛弱多病；※ 僅限輕命主或骨格不固者方應此命
+{ name: "陰水臨死命", chance: 15, condition: c => c.dayElement === "水" && setup.destinySystem.ganYinYang[c.dayGZ.gan] === "陰" && ["巳", "午"].includes(c.monthGZ.zhi) && c.boneWeight <= 3.0 }, // 【出處】《三命真源》陰水臨死地，主命艱難；※ 僅限輕命主或骨格不固者方應此命
+{ name: "陰陽剋戰命", chance: 15, condition: c => setup.destinySystem.ganYinYang[c.dayGZ.gan] !== setup.destinySystem.zhiYinYang[c.dayGZ.zhi] && c.relations.includes("剋我") && c.boneWeight <= 5.0 }, // 【出處】《三命通會》陰陽背剋，命難兩全；※ 多見於三兩至五兩之命格
+{ name: "陰金陷絕命", chance: 14, condition: c => c.dayElement === "金" && setup.destinySystem.ganYinYang[c.dayGZ.gan] === "陰" && setup.destinySystem.getChangShengStatus(c.dayGZ.gan, c.dayGZ.zhi) === "絕" && c.boneWeight <= 3.0 }, // 【出處】《命理真解》陰金絕地，命脈難全；※ 僅限輕命主或骨格不固者方應此命
+{ name: "陽干剋日命", chance: 15, condition: c => setup.destinySystem.ganYinYang[c.dayGZ.gan] === "陽" && c.relations.filter(r => r === "剋我").length >= 2 && c.dayElement !== c.monthElement && c.boneWeight <= 7.0 }, // 【出處】《子平粹言》陽剋太過，日主不堪；※ 雖命重亦難全免其厄
+
+
+////蠱命///
+{ name: "蠱毒入命", chance: 24, condition: c => ["巳", "未"].includes(c.dayGZ.zhi) && ["丑", "戌"].includes(c.timeZhi) && c.relations.includes("剋我") && c.hasQiSha && c.boneWeight <= 3.0 }, // 【出處】《神鋒通考》蠱星多出巳未日，時落墓庫主毒厄
+{ name: "蠱厄纏身命", chance: 25, condition: c => c.dayGZ.zhi === "巳" && c.timeZhi === "未" && c.hasPianYin && c.relations.includes("剋我") && c.boneWeight <= 3.0 }, // 【出處】《星命總錄》蠱厄最忌巳未交會，主破氣病疾
+{ name: "蠱殺制命", chance: 24, condition: c => c.hasQiSha && ["巳", "申"].includes(c.timeZhi) && c.relations.includes("剋我") && !c.hasZhengYin && c.boneWeight <= 3.0 }, // 【出處】《命理集成》七殺落蠱地，印不生者為毒命
+{ name: "蠱靈沖身命", chance: 24, condition: c => c.dayElement === "水" && ["火", "土"].includes(c.timeElement) && ["巳", "午"].includes(c.dayGZ.zhi) && c.relations.includes("剋我") && c.boneWeight <= 3.0 }, // 【出處】《子平粹言》蠱靈臨身，陰陽沖克主邪纏
+
+//======六親========//
+{ name: "六親緣薄命", chance: 28, condition: c =>
+  c.hasJieCai &&
+  !c.hasZhengYin &&
+  c.relations.filter(r => r.relation === "剋我").length >= 2 &&
+  ["陰"].includes(setup.destinySystem.ganYinYang[c.dayGZ.gan])
+}, // 出處：《子平真詮》劫財重無印，主克親疏遠，日干屬陰則更感情淡薄
+
+{ name: "六親無靠命", chance: 26, condition: c =>
+  c.hasBiJian &&
+  c.hasJieCai &&
+  !c.hasZhengCai &&
+  !c.hasZhengYin &&
+  c.relations.filter(r => r.relation === "剋我").length >= 2
+}, // 出處：《滴天髓》比劫過重剋財印，命主孤立無援，六親無靠
+
+{ name: "孤克命", chance: 27, condition: c =>
+  c.hasQiSha &&
+  !c.hasShiShen &&
+  !c.hasZhengYin &&
+  ["丙", "庚", "辛"].includes(c.dayGZ.gan) &&
+  ["巳", "申", "酉", "戌"].includes(c.monthGZ.zhi)
+}, // 出處：《三命通會》日主強見七殺無制，命多克親，孤星獨行之象
+
+{ name: "六親薄命", chance: 25, condition: c =>
+  c.yinCount >= 2 &&
+  c.dayStrength < 3 &&
+  !c.hasGuan &&
+  !c.hasCai &&
+  ["水", "火"].includes(c.monthElement)
+}, // 出處：《命理探源》印旺無財官，日主身弱則六親難靠
+
+{ name: "親緣冷淡命", chance: 24, condition: c =>
+  c.hasPianYin &&
+  !c.hasZhengYin &&
+  c.relations.filter(r => r.relation === "我剋").length === 0 &&
+  c.relations.filter(r => r.relation === "剋我").length >= 2
+}, // 出處：《三命會海》偏印過重無正印，且無生氣日主，親緣冷淡難聚
+
+{ name: "孤寒命", chance: 26, condition: c =>
+  ["壬", "癸"].includes(c.dayGZ.gan) &&
+  ["亥", "子", "丑"].includes(c.monthGZ.zhi) &&
+  c.hasPianYin &&
+  !c.hasZhengCai &&
+  c.relations.every(r => r.relation !== "我生")
+}, // 出處：《滴天髓》癸水日主寒月見偏印無財，孤寒薄命之象
+
+{ name: "六親不親命", chance: 25, condition: c =>
+  c.dayGZ.gan === "辛" &&
+  ["酉", "戌", "亥"].includes(c.timeZhi) &&
+  !c.hasZhengYin &&
+  !c.hasShiShen &&
+  c.relations.filter(r => r.relation === "剋我").length >= 2
+}, // 出處：《子平粹言》辛金女命晚年剋親、缺食印者多孤苦無依
+
+{ name: "祖蔭淺薄命", chance: 24, condition: c =>
+  c.hasPianYin &&
+  !c.hasZhengYin &&
+  !c.hasGuiRen &&
+  ["庚", "辛"].includes(c.dayGZ.gan) &&
+  c.relations.filter(r => r.relation === "剋我").length >= 1
+}, // 出處：《三命通會》金日見偏印無貴人、無印祿，多祖蔭不厚
+
+{ name: "六親分離命", chance: 24, condition: c =>
+  c.hasJieCai &&
+  c.hasShangGuan &&
+  c.dayElement === "金" &&
+  c.relations.filter(r => r.relation === "剋我").length >= 2
+}, // 出處：《滴天髓》金日主逢傷官與劫財剋我，主與父母兄弟緣薄
+
+{ name: "剋親孤命", chance: 23, condition: c =>
+  ["庚", "壬", "戊"].includes(c.dayGZ.gan) &&
+  c.relations.filter(r => r.relation === "剋我").length >= 2 &&
+  c.hasQiSha &&
+  !c.hasShiShen
+}, // 出處：《命理約言》剛日主逢剋且見七殺無制，常有克親孤緣之象剋且見七殺無制，常有克親孤緣之象
 
 // ==== 常見命格（偏兇版）====
-{ name: "七殺劫財命", chance: 24, condition: c => c.dayElement === "木" && c.hasJieCai }, // 出處：《三命通會》卷七
-{ name: "桃花煞命", chance: 26, condition: c => ["申","子","辰","卯","酉"].includes(c.monthGZ.zhi) && c.relations.includes("剋我") }, // 出處：《子平真詮》
-{ name: "正官失祿命", chance: 30, condition: c => c.hasZhengGuan && c.relations.includes("剋我") }, // 出處：《三命指迷》
-{ name: "食傷空亡命", chance: 28, condition: c => c.hasShiShen && !c.hasZhengCai }, // 出處：《滴天髓闡微》
-{ name: "七殺反噬命", chance: 27, condition: c => c.hasQiSha && c.relations.includes("我剋") }, // 出處：《三命通會》
-{ name: "財官失衡命", chance: 26, condition: c => c.hasZhengCai && !c.hasZhengGuan && !c.hasZhengYin }, // 出處：《命理約言》
-{ name: "偏印失根命", chance: 25, condition: c => c.hasPianYin && !c.relations.includes("生我") }, // 出處：《子平真詮》
-{ name: "傷官見煞命", chance: 25, condition: c => c.hasShangGuan && !c.hasZhengGuan }, // 出處：《三命通會》卷六
-{ name: "劫財克身命", chance: 24, condition: c => c.hasJieCai && c.relations.includes("剋我") }, // 出處：《子平真詮》外篇
-{ name: "孤辰寡宿命", chance: 26, condition: c => ["寅", "巳", "申", "亥"].includes(c.timeZhi) && c.relations.includes("剋我") && !c.hasZhengYin }, // 出處：《命理約言》
-{ name: "祿馬失途命", chance: 28, condition: c => ["午", "亥"].includes(c.monthGZ.zhi) && !c.relations.includes("我生") }, // 出處：《三命通會》
-{ name: "印重官輕命", chance: 27, condition: c => c.hasZhengYin && !c.hasZhengGuan }, // 出處：《滴天髓》
-{ name: "小人暗行命", chance: 26, condition: c => c.hasJieCai && c.relations.includes("剋我") && !c.relations.includes("我生") }, // 出處：《子平粹言》
-{ name: "財重壓身命", chance: 24, condition: c => c.hasZhengCai && !c.hasBiJian && !c.hasZhengYin }, // 出處：《子平真詮》
-{ name: "印多身弱命", chance: 25, condition: c => c.hasZhengYin && c.relations.includes("剋我") }, // 出處：《滴天髓》
-{ name: "食神無氣命", chance: 23, condition: c => c.hasShiShen && !c.relations.includes("我生") }, // 出處：《三命通會》
-{ name: "官殺亂命", chance: 26, condition: c => c.hasZhengGuan && c.hasQiSha && !c.hasZhengYin }, // 出處：《神峰通考》
-{ name: "桃花重重命", chance: 27, condition: c => ["子", "午", "卯", "酉"].includes(c.dayGZ.zhi) && ["子", "午", "卯", "酉"].includes(c.timeZhi) }, // 出處：《三命通會》
-{ name: "水多木漂命", chance: 25, condition: c => c.dayElement === "木" && c.monthElement === "水" && c.timeElement === "水" }, // 出處：《滴天髓》
-{ name: "木火燥命", chance: 26, condition: c => c.dayElement === "木" && c.monthElement === "火" && c.timeElement === "火" }, // 出處：《三命通會》
-{ name: "官輕印重命", chance: 25, condition: c => c.hasZhengYin && !c.hasZhengGuan && c.relations.includes("生我") }, // 出處：《子平粹言》
-{ name: "七殺奪權命", chance: 26, condition: c => c.hasQiSha && c.relations.includes("我剋") && !c.hasZhengGuan }, // 出處：《三命指迷》
-{ name: "殺重無制命", chance: 28, condition: c => c.hasQiSha && !c.hasZhengYin && !c.hasShangGuan }, // 出處：《滴天髓》
-   
-   
 
+{ name: "七殺劫財命", chance: 24, condition: c => c.dayGZ.gan === "乙" && setup.destinySystem.zhiCangGan[c.monthGZ.zhi]?.includes("庚") && setup.destinySystem.getTenGod("乙", "庚") === "七殺" && setup.destinySystem.zhiCangGan[c.timeZhi]?.includes("丙") && setup.destinySystem.getTenGod("乙", "丙") === "劫財" && !c.hasZhengYin }, // 【出處】《三命通會》乙日庚殺丙劫並現無印，主性烈損財
+{ name: "七殺反噬命", chance: 27, condition: c => ["乙", "丁"].includes(c.dayGZ.gan) && c.hasQiSha && !c.hasZhengYin && !c.hasShiShen && setup.destinySystem.zhiCangGan[c.monthGZ.zhi]?.some(g => setup.destinySystem.getTenGod(c.dayGZ.gan, g) === "七殺") && c.relations.filter(r => r.relation === "剋我").length >= 2 }, // 【出處】《三命通會》七殺無制，反克日主，性剛易敗
+{ name: "財官失衡命", chance: 26, condition: c => c.hasZhengCai && !c.hasZhengGuan && !c.hasZhengYin && c.caiCount >= 2 && setup.destinySystem.zhiCangGan[c.timeZhi]?.some(g => setup.destinySystem.getTenGod(c.dayGZ.gan, g) === "正財") }, // 【出處】《命理約言》財多官弱印缺，勢不均衡
+{ name: "偏印失根命", chance: 25, condition: c => c.hasPianYin && !setup.destinySystem.zhiCangGan[c.monthGZ.zhi]?.includes("壬") && c.dayElement !== "水" && setup.destinySystem.getTenGod(c.dayGZ.gan, "壬") === "偏印" }, // 【出處】《子平真詮》偏印無根，虛浮而難成器
+{ name: "傷官見煞命", chance: 25, condition: c => c.hasShangGuan && c.hasQiSha && !c.hasZhengYin && !c.hasHe && setup.destinySystem.getGanYinYang(c.dayGZ.gan) !== setup.destinySystem.getGanYinYang(c.monthGZ.gan) }, // 【出處】《三命通會》傷官見煞，無印無合，主災
+{ name: "劫財克身命", chance: 24, condition: c => c.hasJieCai && !c.hasShiShen && c.relations.filter(r => r.relation === "剋我" && r.strength > 2).length >= 1 && setup.destinySystem.zhiCangGan[c.monthGZ.zhi]?.some(g => setup.destinySystem.getTenGod(c.dayGZ.gan, g) === "劫財") }, // 【出處】《子平真詮》劫財剋主無制，性狠財破
+{ name: "孤冷剋戰命", chance: 26, condition: c => ["寅", "巳", "申", "亥"].includes(c.timeZhi) && !c.hasBiJian && c.relations.filter(r => r.relation === "剋我").length >= 2 }, // 【出處】《命理約言》四絕孤支、無助而受剋
+{ name: "印重官輕命", chance: 27, condition: c => c.yinCount >= 2 && c.guanCount < 1 && c.relations.filter(r => r.relation === "生我").length >= 2 && !c.hasZhengCai }, // 【出處】《滴天髓》印盛官微，清貴而無權
+{ name: "小人暗行命", chance: 26, condition: c => c.hasJieCai && c.dayElement === "金" && !c.hasShiShen && c.relations.filter(r => r.relation === "剋我").length >= 1 }, // 【出處】《子平粹言》金日劫旺無食制，主小人暗害
+{ name: "財重壓身命", chance: 24, condition: c => c.caiCount >= 2 && !c.hasZhengYin && c.bijianCount < 1 && c.relations.filter(r => r.relation === "我剋").length >= 2 }, // 【出處】《子平真詮》重財無比助，壓力難承
+{ name: "印多身弱命", chance: 25, condition: c => c.yinCount >= 2 && !c.hasBiJian && c.dayStrength < 3 && setup.destinySystem.getRelation(c.monthElement, c.dayElement) === "生我" }, // 【出處】《滴天髓》印多身弱，無助為災
+{ name: "食神無氣命", chance: 23, condition: c => c.hasShiShen && c.relations.every(r => r.relation !== "生我") && c.monthElement !== c.shishenElement }, // 【出處】《三命通會》食神失令，無氣無根
+{ name: "官殺混雜命", chance: 26, condition: c => c.hasZhengGuan && c.hasQiSha && !c.hasHe && c.guanCount + c.shaCount >= 2 && setup.destinySystem.getGanYinYang(c.dayGZ.gan) !== setup.destinySystem.getGanYinYang(c.monthGZ.gan) }, // 【出處】《神峰通考》官殺混雜，性剛而難以駕馭
+{ name: "水多木漂命", chance: 25, condition: c => c.dayElement === "木" && c.waterCount >= 2 && c.earthCount < 1 && !c.hasZhengYin }, // 【出處】《滴天髓》水多木漂，無制則命浮動
+{ name: "木火燥烈命", chance: 26, condition: c => c.dayElement === "木" && c.fireCount >= 2 && c.waterCount < 1 && !c.hasZhengYin }, // 【出處】《三命通會》木火過旺，無潤無根，燥烈失和
+{ name: "官輕印重命", chance: 25, condition: c => c.yinCount >= 2 && c.guanCount === 1 && c.dayStrength > 4 && !c.hasZhengCai }, // 【出處】《子平粹言》印重官輕，難任其職
+{ name: "七殺奪權命", chance: 26, condition: c => c.hasQiSha && !c.hasZhengGuan && c.relations.some(r => r.relation === "我剋" && r.element === "財") && c.relations.filter(r => r.relation === "剋我").length >= 2 }, // 【出處】《三命指迷》七殺乘財奪權，剋主無制
+{ name: "殺重無制命", chance: 28, condition: c => c.shaCount >= 2 && !c.hasShiShen && !c.hasShangGuan && !c.hasZhengYin && !c.hasHe }, // 【出處】《滴天髓》七殺多而無制者，凶暴剋主
+
+
+   ///100%///
+{
+  name: "孤辰寡宿星曜",
+  chance: 100,
+  condition: c => {
+    if (!c.yearZhi || !c.monthZhi || !c.dayZhi || !c.timeZhi) return false;
+
+    const table = {
+      "申": { guChen: "寅", guSu: "巳" },
+      "子": { guChen: "寅", guSu: "巳" },
+      "辰": { guChen: "寅", guSu: "巳" },
+      "寅": { guChen: "申", guSu: "酉" },
+      "午": { guChen: "申", guSu: "酉" },
+      "戌": { guChen: "申", guSu: "酉" },
+      "巳": { guChen: "亥", guSu: "丑" },
+      "酉": { guChen: "亥", guSu: "丑" },
+      "丑": { guChen: "亥", guSu: "丑" },
+      "亥": { guChen: "巳", guSu: "午" },
+      "卯": { guChen: "巳", guSu: "午" },
+      "未": { guChen: "巳", guSu: "午" }
+    };
+
+    const zhiTable = table[c.yearZhi];
+    if (!zhiTable) return false;
+
+    const zhis = [c.yearZhi, c.monthZhi, c.dayZhi, c.timeZhi];
+    return zhis.includes(zhiTable.guChen) || zhis.includes(zhiTable.guSu);
+  }
+}, // 出處：《淵海子平》《神峰通考》
+// 华盖星判断修正（避免全柱遍历）
+{
+  name: "華蓋星曜",
+  chance: 100,
+  condition: c => {
+    if (!c.yearZhi || !c.timeZhi) return false;
+
+    const map = {
+      寅: "戌", 午: "戌", 戌: "戌",
+      申: "丑", 子: "丑", 辰: "丑"
+    };
+
+    return c.timeZhi === map[c.yearZhi];
+  }
+},// 出處：《三命通會》  
+{
+  name: "天德貴人星曜",
+  chance: 100,
+  condition: c => {
+    if (!c.yearGan || !c.yearZhi || !c.monthZhi || !c.dayZhi || !c.timeZhi) return false;
+
+    const table = {
+      甲: ["寅", "卯"], 乙: ["寅", "卯"],
+      丙: ["巳", "午"], 丁: ["巳", "午"],
+      戊: ["巳", "午"], 己: ["巳", "午"],
+      庚: ["申", "酉"], 辛: ["申", "酉"],
+      壬: ["亥", "子"], 癸: ["亥", "子"]
+    };
+
+    const stars = table[c.yearGan] || [];
+    const zhis = [c.yearZhi, c.monthZhi, c.dayZhi, c.timeZhi];
+    return zhis.some(z => stars.includes(z));
+  }
+},
+{
+  name: "月德貴人星曜",
+  chance: 100,
+  condition: c => {
+    if (!c.yearGan || !c.yearZhi || !c.monthZhi || !c.dayZhi || !c.timeZhi) return false;
+
+    const table = {
+      甲: ["卯"], 乙: ["寅"],
+      丙: ["午"], 丁: ["巳"],
+      戊: ["午"], 己: ["巳"],
+      庚: ["酉"], 辛: ["申"],
+      壬: ["子"], 癸: ["亥"]
+    };
+
+    const stars = table[c.yearGan] || [];
+    const zhis = [c.yearZhi, c.monthZhi, c.dayZhi, c.timeZhi];
+    return zhis.some(z => stars.includes(z));
+  }
+}, // 出處：《三命通會》  
+{
+  name: "文昌貴人星曜",
+  chance: 100,
+  condition: c => {
+    if (!c.yearGan || !c.yearZhi || !c.monthZhi || !c.dayZhi || !c.timeZhi) return false;
+
+    const table = {
+      甲: ["巳"], 乙: ["午"],
+      丙: ["申"], 丁: ["酉"],
+      戊: ["申"], 己: ["酉"],
+      庚: ["亥"], 辛: ["子"],
+      壬: ["寅"], 癸: ["卯"]
+    };
+
+    const stars = table[c.yearGan] || [];
+    const zhis = [c.yearZhi, c.monthZhi, c.dayZhi, c.timeZhi];
+    return zhis.some(z => stars.includes(z));
+  }
+}, // 出處：《三命通會》《神峰通考》
 
   // ==== 普通命格（保底） ====
   { name: "實常之命", chance: 0.1, condition: c => true },
@@ -4353,6 +4378,7 @@ getComplexRelation(monthElement, dayElement, timeElement, monthGZ, dayGZ, timeGa
   { name: "無祿無權格", chance: 0.05, condition: c => !c.hasZhengCai && !c.hasZhengGuan },
   { name: "平安一生格", chance: 0.05, condition: c => c.relations.length === 3 },
 ];
+
 
 const candidates = destinyPool.filter(d => d.condition(ctx));
 if (candidates.length === 0) {
